@@ -45,8 +45,7 @@
                 <div id="peopleList" class="muted small"></div>
             </section>
 
-
-            <!-- Add transaction -->
+            <!-- เพิ่มรายการ -->
             <section class="card">
                 <h2>เพิ่มรายการ</h2>
                 <input id="txnDesc" type="text" placeholder="รายละเอียด (เช่น อาหารเย็น)" style="margin-bottom:10px;">
@@ -57,10 +56,10 @@
                     </select>
                 </div>
 
-                <label class="muted small">วิธีการหาร</label>
+                <label class="muted small">วิธีหาร</label>
                 <select id="splitMode" style="margin-top:6px;">
                     <option value="equal">หารเท่ากัน</option>
-                    <option value="participants">เลือกผู้ร่วมจ่าย</option>
+                    <option value="participants">เลือกคนที่หาร</option>
                     <option value="custom">กำหนดสัดส่วนเอง</option>
                 </select>
 
@@ -70,12 +69,7 @@
                 </div>
 
                 <div id="customSharesBox" class="sub-box" style="display:none;">
-                    <h3 class="muted small">Custom Share</h3>
-                    <div id="customShares"></div>
-                </div>
-
-                <div id="customSharesBox" class="sub-box" style="display:none;">
-                    <h3 class="muted small">Custom Share</h3>
+                    <h3 class="muted small">กำหนดสัดส่วนสมาชิก</h3>
                     <div id="customShares"></div>
                 </div>
                 <button id="addTxnBtn" class="btn full" style="margin-top:10px;">เพิ่มรายการ</button>

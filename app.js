@@ -16,6 +16,14 @@ const settlementList = document.getElementById("settlementList");
 const exportBtn = document.getElementById("exportBtn");
 const importFile = document.getElementById("importFile");
 const clearBtn = document.getElementById("clearBtn");
+const participantsBox = document.getElementById("participantsBox");
+const customSharesBox = document.getElementById("customSharesBox");
+
+splitMode.addEventListener("change", () => {
+  const mode = splitMode.value;
+  participantsBox.style.display = mode === "participants" ? "block" : "none";
+  customSharesBox.style.display = mode === "custom" ? "block" : "none";
+});
 
 // Load state
 let state = JSON.parse(
@@ -113,14 +121,18 @@ function calculateBalances() {
       ids.forEach((id) => (shareMap[id] = cut));
     } else if (t.splitMode === "participants") {
       // ถ้าไม่มีใครเลือก ให้ผู้จ่ายคนเดียว
-      const ids = t.participants && t.participants.length ? t.participants : [payer];
+      const ids =
+        t.participants && t.participants.length ? t.participants : [payer];
       const cut = amount / ids.length;
       ids.forEach((id) => {
         if (id !== payer) shareMap[id] = cut; // ลดเฉพาะคนอื่น
       });
     } else if (t.splitMode === "custom") {
       // คำนวณตามสัดส่วนที่กำหนด
-      const totalShares = Object.values(t.shares || {}).reduce((a, b) => a + b, 0);
+      const totalShares = Object.values(t.shares || {}).reduce(
+        (a, b) => a + b,
+        0
+      );
       if (totalShares > 0) {
         Object.entries(t.shares).forEach(([id, s]) => {
           if (id !== payer) shareMap[id] = amount * (s / totalShares);
@@ -139,7 +151,6 @@ function calculateBalances() {
 
   return bal;
 }
-
 
 // Render summary
 function renderSummary() {
