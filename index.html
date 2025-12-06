@@ -36,12 +36,15 @@
             <!-- Add person -->
             <section class="card">
                 <h2>เพิ่มสมาชิก</h2>
-                <div class="row">
+
+                <div class="row add-person-row">
                     <input id="personName" type="text" placeholder="ชื่อ (เช่น สมชาย)">
                     <button id="addPersonBtn" class="btn blue">เพิ่ม</button>
                 </div>
+
                 <div id="peopleList" class="muted small"></div>
             </section>
+
 
             <!-- Add transaction -->
             <section class="card">
@@ -94,11 +97,18 @@
             <!-- Import / Export -->
             <section class="card">
                 <h2>นำเข้า / ส่งออกข้อมูล</h2>
-                <button id="exportBtn" class="btn full">ส่งออก JSON</button>
-                <label class="import-btn">
-                    นำเข้า JSON
-                    <input type="file" id="importFile" accept=".json" hidden>
-                </label>
+
+                <div class="row" style="gap: 8px;">
+                    <button id="exportBtn" class="btn" style="flex: 1;">
+                        ส่งออก JSON
+                    </button>
+
+                    <label class="import-btn btn"
+                        style="flex: 1; text-align:center; display:flex; justify-content:center; align-items:center;">
+                        นำเข้า JSON
+                        <input type="file" id="importFile" accept=".json" hidden>
+                    </label>
+                </div>
             </section>
 
             <!-- Clear -->

@@ -1,6 +1,4 @@
-/* ===============================
-   Global
-================================= */
+/* Global  */
 * {
     margin: 0;
     padding: 0;
@@ -9,202 +7,190 @@
 }
 
 body {
-    background: #eef7ff;
-    padding: 12px;
+    background: linear-gradient(180deg, #eaf6ff, #f4faff);
+    padding: 18px;
     color: #333;
     font-size: 16px;
 }
 
 /* App wrapper */
 .app {
-    max-width: 420px;
-    /* iPhone 12 width ~390-414px */
+    max-width: 440px;
     margin: 0 auto;
-    padding-bottom: 20px;
+    padding-bottom: 30px;
 }
 
-/* ===============================
-   Header
-================================= */
+/* Header */
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
-    padding: 6px 4px;
+    margin-bottom: 22px;
+    padding: 10px 6px;
 }
 
 .header .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .header .brand-text h1 {
-    font-size: 20px;
+    font-size: 22px;
     margin: 0;
     font-weight: 700;
+    color: #2a8cfb;
 }
 
 .header .brand-text .sub {
     margin: 0;
-    font-size: 12px;
-    color: #777;
+    font-size: 13px;
+    color: #6c7a89;
 }
 
 .header .version {
-    padding: 4px 8px;
-    background: #ffffffaa;
-    border-radius: 10px;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    font-size: 11px;
-    color: #777;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(30, 75, 140, 0.08);
+    font-size: 12px;
+    color: #6c7a89;
 }
 
 .header .logo-img {
-    width: 36px;
+    width: 40px;
     height: auto;
 }
 
-/* ===============================
-   Grid Layout
-================================= */
+/* Grid Layout */
 .grid {
     display: grid;
-    gap: 20px;
+    gap: 24px;
     grid-template-columns: 1fr;
 }
 
-/* ===============================
-   Card
-================================= */
+/*Card */
 .card {
-    background: #fff;
-    padding: 20px;
-    border-radius: 14px;
-    box-shadow: 0 4px 12px rgba(110, 203, 255, 0.25);
-    border-left: 5px solid #6ecbff;
+    background: #ffffff;
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: 0 6px 20px rgba(120, 183, 255, 0.25);
+    border-left: 6px solid #4ca9ff;
+    transition: 0.25s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(120, 183, 255, 0.32);
 }
 
 .card h2 {
     font-size: 18px;
-    margin-bottom: 10px;
-    color: #4ca9ff;
+    margin-bottom: 12px;
+    color: #2a8cfb;
 }
 
-/* ===============================
-   Inputs
-================================= */
+/* Inputs */
 input,
 select {
     width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 2px solid #cbeaff;
+    padding: 14px;
+    border-radius: 14px;
+    border: 2px solid #d7edff;
     font-size: 16px;
-    background: #f7fbff;
-    transition: 0.2s;
+    background: #f8fbff;
+    transition: 0.25s;
 }
 
 input:focus,
 select:focus {
     outline: none;
-    border-color: #6ecbff;
+    border-color: #4ca9ff;
     background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(76, 169, 255, 0.12);
 }
 
-/* ===============================
-   Buttons
-================================= */
+/* Buttons */
 .btn {
-    padding: 14px;
+    padding: 15px;
     border: none;
-    border-radius: 10px;
-    background: #6ecbff;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6ecbff, #4ca9ff);
     color: white;
     font-size: 17px;
     cursor: pointer;
-    transition: 0.2s;
-    box-shadow: 0 3px 8px rgba(110, 203, 255, 0.35);
+    transition: 0.25s;
+    box-shadow: 0 4px 12px rgba(80, 170, 255, 0.35);
 }
 
 .btn:hover {
-    background: #55baf2;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(80, 170, 255, 0.42);
+}
+
+.btn:active {
+    transform: scale(0.97);
 }
 
 .btn.full {
     width: 100%;
 }
 
+/* Variants */
 .btn.blue {
-    background: #4ca9ff;
-}
-
-.btn.blue:hover {
-    background: #309df7;
+    background: linear-gradient(135deg, #4ca9ff, #1f90ff);
 }
 
 .btn.green {
-    background: #8defff;
-    color: #333;
-}
-
-.btn.green:hover {
-    background: #6be2f5;
+    background: linear-gradient(135deg, #9dfdff, #62e8f2);
+    color: #033d48;
 }
 
 .btn.red {
-    background: #ff6b6b;
+    background: linear-gradient(135deg, #ff6b6b, #ff4646);
 }
 
-.btn.red:hover {
-    background: #ff5252;
-}
-
-/* ===============================
-   Utility
-================================= */
+/* Utility */
 .row {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.import-btn.btn {
+    cursor: pointer;
 }
 
 .muted {
-    color: #777;
+    color: #666;
 }
 
-/* ===============================
-   Sub-box
-================================= */
+/* Sub-box  */
 .sub-box {
-    background: #e8f5ff;
-    border: 2px solid #bfe3ff;
-    border-radius: 10px;
-    padding: 10px;
+    background: #f0f8ff;
+    border: 2px solid #c8e4ff;
+    border-radius: 12px;
+    padding: 12px;
     margin-top: 10px;
 }
 
 .sub-box h3 {
     font-size: 15px;
-    margin-bottom: 6px;
-    color: #4ca9ff;
+    margin-bottom: 8px;
+    color: #2a8cfb;
 }
 
-/* ===============================
-   List
-================================= */
+/* List */
 .list {
     list-style: none;
 }
 
 .list li {
-    background: #e8f5ff;
-    padding: 12px;
-    border-radius: 10px;
-    border: 2px solid #c6e7ff;
-    margin-bottom: 8px;
+    background: #f1f8ff;
+    padding: 14px;
+    border-radius: 12px;
+    border: 2px solid #d0e7ff;
+    margin-bottom: 10px;
     font-size: 15px;
     display: flex;
     justify-content: space-between;
@@ -212,102 +198,109 @@ select:focus {
 }
 
 .list button {
-    padding: 5px 10px;
+    padding: 7px 12px;
     border: none;
     background: #4ca9ff;
     color: white;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: 0.25s;
 }
 
-/* ===============================
-   Import Button
-================================= */
+.list button:hover {
+    background: #1d8cf7;
+}
+
+/* Import Button */
 .import-btn {
     display: block;
-    background: #f0faff;
-    padding: 14px;
-    border-radius: 10px;
+    background: #f6fbff;
+    padding: 16px;
+    border-radius: 14px;
     text-align: center;
     cursor: pointer;
-    border: 2px dashed #b5ddff;
-    color: #4ca9ff;
+    border: 2px dashed #aedcff;
+    color: #2a8cfb;
     font-weight: bold;
+    transition: 0.25s;
 }
 
 .import-btn:hover {
-    background: #e4f5ff;
+    background: #e9f5ff;
 }
 
-/* ===============================
-   Bigger Checkboxes
-================================= */
+/* Bigger Checkboxes */
 #participantsCheckboxes label {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px;
-    margin-bottom: 6px;
-    background: #fff;
-    border-radius: 10px;
-    border: 1px solid #ddd;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #d0d0d0;
     cursor: pointer;
-    font-size: 15px;
+    font-size: 16px;
 }
 
 #participantsCheckboxes input[type="checkbox"] {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
-    accent-color: #1ca0f8;
+    accent-color: #2a8cfb;
 }
 
-/* ===============================
-   SweetAlert2 Theme
-================================= */
+/* SweetAlert2 Theme */
 .swal2-popup {
-    border-radius: 16px !important;
-    padding: 25px !important;
+    border-radius: 18px !important;
+    padding: 28px !important;
     background: #ffffff !important;
-    box-shadow: 0 4px 20px rgba(110, 203, 255, 0.35) !important;
+    box-shadow: 0 10px 26px rgba(120, 183, 255, 0.40) !important;
 }
 
 .swal2-title {
-    font-size: 20px !important;
-    color: #4ca9ff !important;
-    font-weight: 600 !important;
+    font-size: 22px !important;
+    color: #2a8cfb !important;
+    font-weight: 700 !important;
 }
 
 .swal2-html-container {
-    font-size: 15px !important;
+    font-size: 16px !important;
     color: #555 !important;
 }
 
 .swal2-confirm {
-    background: #4ca9ff !important;
-    border-radius: 10px !important;
-    padding: 10px 25px !important;
+    background: #2a8cfb !important;
+    border-radius: 12px !important;
+    padding: 12px 28px !important;
     font-size: 16px !important;
-    box-shadow: 0 3px 8px rgba(76, 169, 255, 0.35) !important;
-}
-
-.swal2-confirm:hover {
-    background: #309df7 !important;
+    box-shadow: 0 3px 10px rgba(76, 169, 255, 0.4) !important;
 }
 
 .swal2-cancel {
-    background: #ff6b6b !important;
-    border-radius: 10px !important;
-    padding: 10px 25px !important;
+    background: #ff5858 !important;
+    border-radius: 12px !important;
+    padding: 12px 28px !important;
     font-size: 16px !important;
     color: white !important;
 }
 
-.swal2-cancel:hover {
-    background: #ff5252 !important;
+.swal2-backdrop-show {
+    background: rgba(185, 220, 255, 0.5) !important;
+    backdrop-filter: blur(3px);
 }
 
-.swal2-backdrop-show {
-    background: rgba(180, 220, 255, 0.4) !important;
-    backdrop-filter: blur(2px);
+.add-person-row {
+    display: flex;
+    gap: 10px;
+}
+
+.add-person-row input {
+    flex: 1;
+}
+
+.add-person-row .btn {
+    padding: 14px 20px;
+    /* ปรับปุ่มให้สมส่วน */
+    white-space: nowrap;
 }

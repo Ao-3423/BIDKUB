@@ -1,7 +1,3 @@
-// =======================
-// app.js — BIDKUB (Full, Clean)
-// =======================
-
 // DOM elements
 const txnList = document.getElementById("txnList");
 const participantsCheckboxes = document.getElementById(
