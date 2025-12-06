@@ -1,8 +1,6 @@
 // DOM elements
 const txnList = document.getElementById("txnList");
-const participantsCheckboxes = document.getElementById(
-  "participantsCheckboxes"
-);
+const participantsCheckboxes = document.getElementById("participantsCheckboxes");
 const customShares = document.getElementById("customShares");
 const addPersonBtn = document.getElementById("addPersonBtn");
 const personName = document.getElementById("personName");
@@ -13,7 +11,6 @@ const txnPayer = document.getElementById("txnPayer");
 const splitMode = document.getElementById("splitMode");
 const summaryBalances = document.getElementById("summaryBalances");
 const settlementList = document.getElementById("settlementList");
-const calcBtn = document.getElementById("calcBtn");
 const exportBtn = document.getElementById("exportBtn");
 const importFile = document.getElementById("importFile");
 const clearBtn = document.getElementById("clearBtn");
@@ -75,18 +72,19 @@ function renderTxns() {
   });
 }
 
-// Render participant checkboxes and custom inputs
+// Render participant checkboxes & custom input
 function renderSplitControls() {
   participantsCheckboxes.innerHTML = "";
   customShares.innerHTML = "";
+
   state.people.forEach((p) => {
     const id = p.id;
-    // Checkbox chips
+
     const chip = document.createElement("label");
     chip.className = "participant-chip";
     chip.innerHTML = `<input type='checkbox' data-id='${id}' checked /> ${p.name}`;
     participantsCheckboxes.appendChild(chip);
-    // Custom share input
+
     const cs = document.createElement("div");
     cs.className = "row";
     cs.innerHTML = `
@@ -101,10 +99,12 @@ function renderSplitControls() {
 function calculateBalances() {
   const bal = {};
   state.people.forEach((p) => (bal[p.id] = 0));
+
   state.txns.forEach((t) => {
     const payer = t.payerId;
     const amount = t.amount;
     let shareMap = {};
+
     if (t.splitMode === "equal") {
       const ids = state.people.map((p) => p.id);
       const cut = amount / ids.length;
@@ -118,15 +118,17 @@ function calculateBalances() {
         shareMap[id] = amount * (s / totalShares);
       });
     }
+
     Object.entries(shareMap).forEach(([uid, owe]) => {
       bal[uid] -= owe;
     });
     bal[payer] += amount;
   });
+
   return bal;
 }
 
-// Render summary balances
+// Render summary
 function renderSummary() {
   const bal = calculateBalances();
   summaryBalances.innerHTML = "";
@@ -138,30 +140,38 @@ function renderSummary() {
   });
 }
 
-// Settlement algorithm
+// Settlement
 function generateSettlements() {
   const bal = calculateBalances();
   let debtors = [],
     creditors = [];
+
   Object.entries(bal).forEach(([id, v]) => {
     if (v < -0.01) debtors.push({ id, amt: -v });
     if (v > 0.01) creditors.push({ id, amt: v });
   });
+
   debtors.sort((a, b) => b.amt - a.amt);
   creditors.sort((a, b) => b.amt - a.amt);
+
   const results = [];
   let i = 0,
     j = 0;
+
   while (i < debtors.length && j < creditors.length) {
     const d = debtors[i],
       c = creditors[j];
     const pay = Math.min(d.amt, c.amt);
+
     results.push({ from: d.id, to: c.id, amount: pay });
+
     d.amt -= pay;
     c.amt -= pay;
+
     if (d.amt <= 0.01) i++;
     if (c.amt <= 0.01) j++;
   }
+
   return results;
 }
 
@@ -187,6 +197,7 @@ addPersonBtn.onclick = () => {
       title: "กรุณากรอกชื่อ",
       confirmButtonText: "ตกลง",
     });
+
   state.people.push({ id: uid(), name });
   personName.value = "";
   save();
@@ -197,12 +208,14 @@ addPersonBtn.onclick = () => {
 addTxnBtn.onclick = () => {
   const desc = txnDesc.value.trim() || "Expense";
   const amount = parseFloat(txnAmount.value);
+
   if (!amount || amount <= 0)
     return Swal.fire({
       icon: "error",
       title: "ราคาต้องมากกว่า 0",
       confirmButtonText: "ตกลง",
     });
+
   const payerId = txnPayer.value;
   if (!payerId)
     return Swal.fire({
@@ -213,35 +226,39 @@ addTxnBtn.onclick = () => {
 
   const mode = splitMode.value;
   let participants = [];
-  document
-    .querySelectorAll('#participantsCheckboxes input[type="checkbox"]')
-    .forEach((ch) => {
-      if (ch.checked) participants.push(ch.dataset.id);
-    });
+
+  document.querySelectorAll('#participantsCheckboxes input[type="checkbox"]').forEach((ch) => {
+    if (ch.checked) participants.push(ch.dataset.id);
+  });
+
   let shares = null;
+
   if (mode === "custom") {
     shares = {};
-    document
-      .querySelectorAll("#customShares input.custom-share-input")
-      .forEach((inp) => {
-        const val = parseFloat(inp.value);
-        if (!isNaN(val) && val > 0) shares[inp.dataset.id] = val;
-      });
+    document.querySelectorAll("#customShares input.custom-share-input").forEach((inp) => {
+      const val = parseFloat(inp.value);
+      if (!isNaN(val) && val > 0) shares[inp.dataset.id] = val;
+    });
+
     if (Object.keys(shares).length === 0)
       return Swal.fire({
         icon: "info",
         title: "ต้องใส่สัดส่วนอย่างน้อย 1 คน",
         confirmButtonText: "ตกลง",
       });
+
     participants = Object.keys(shares);
   }
+
   if (mode === "participants" && participants.length === 0)
     return Swal.fire({
       icon: "warning",
       title: "เลือกคนที่หารก่อน",
       confirmButtonText: "ตกลง",
     });
-  if (participants.length === 0) participants = state.people.map((p) => p.id);
+
+  if (participants.length === 0)
+    participants = state.people.map((p) => p.id);
 
   state.txns.push({
     id: uid(),
@@ -252,8 +269,10 @@ addTxnBtn.onclick = () => {
     participants,
     shares,
   });
+
   txnDesc.value = "";
   txnAmount.value = "";
+
   save();
   rerenderAll();
 };
@@ -268,6 +287,7 @@ exportBtn.onclick = () => {
   a.download = "bidkub-data.json";
   a.click();
   URL.revokeObjectURL(url);
+
   Swal.fire({
     icon: "success",
     title: "ส่งออกข้อมูลเรียบร้อย!",
@@ -279,6 +299,7 @@ exportBtn.onclick = () => {
 importFile.onchange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
+
   const reader = new FileReader();
   reader.onload = (ev) => {
     try {
@@ -289,9 +310,11 @@ importFile.onchange = (e) => {
           title: "ไฟล์ไม่ถูกต้อง",
           confirmButtonText: "ตกลง",
         });
+
       state = json;
       save();
       rerenderAll();
+
       Swal.fire({
         icon: "success",
         title: "นำเข้าข้อมูลสำเร็จ!",
@@ -305,6 +328,7 @@ importFile.onchange = (e) => {
       });
     }
   };
+
   reader.readAsText(file);
 };
 
@@ -327,14 +351,7 @@ clearBtn.onclick = () => {
   });
 };
 
-// Calculate (คำนวณยอด + สร้างรายการชำระหนี้อัตโนมัติ)
-calcBtn.onclick = () => {
-  renderSummary();
-  renderSettlements();
-  Swal.fire("คำนวณเสร็จแล้ว!", "", "success");
-};
-
-// Rerender everything
+// Auto render + auto calculate
 function rerenderAll() {
   renderPeople();
   renderTxns();
@@ -342,5 +359,5 @@ function rerenderAll() {
   renderSettlements();
 }
 
-// Initial
+// Initial load
 rerenderAll();
