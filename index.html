@@ -57,16 +57,21 @@
                     </select>
                 </div>
 
-                <label class="muted small">วิธีหาร</label>
+                <label class="muted small">วิธีการหาร</label>
                 <select id="splitMode" style="margin-top:6px;">
                     <option value="equal">หารเท่ากัน</option>
-                    <option value="participants">เลือกคนที่หาร</option>
-                    <option value="custom">Custom shares</option>
+                    <option value="participants">เลือกผู้ร่วมจ่าย</option>
+                    <option value="custom">กำหนดสัดส่วนเอง</option>
                 </select>
 
                 <div id="participantsBox" class="sub-box">
                     <h3 class="muted small">เลือกคนที่หาร</h3>
                     <div id="participantsCheckboxes"></div>
+                </div>
+
+                <div id="customSharesBox" class="sub-box" style="display:none;">
+                    <h3 class="muted small">Custom Share</h3>
+                    <div id="customShares"></div>
                 </div>
 
                 <div id="customSharesBox" class="sub-box" style="display:none;">

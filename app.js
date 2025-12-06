@@ -1,6 +1,8 @@
 // DOM elements
 const txnList = document.getElementById("txnList");
-const participantsCheckboxes = document.getElementById("participantsCheckboxes");
+const participantsCheckboxes = document.getElementById(
+  "participantsCheckboxes"
+);
 const customShares = document.getElementById("customShares");
 const addPersonBtn = document.getElementById("addPersonBtn");
 const personName = document.getElementById("personName");
@@ -94,7 +96,6 @@ function renderSplitControls() {
     customShares.appendChild(cs);
   });
 }
-
 // Calculate balances
 function calculateBalances() {
   const bal = {};
@@ -106,27 +107,39 @@ function calculateBalances() {
     let shareMap = {};
 
     if (t.splitMode === "equal") {
+      // หารเท่าๆ ทุกคน
       const ids = state.people.map((p) => p.id);
       const cut = amount / ids.length;
       ids.forEach((id) => (shareMap[id] = cut));
     } else if (t.splitMode === "participants") {
-      const cut = amount / t.participants.length;
-      t.participants.forEach((id) => (shareMap[id] = cut));
-    } else if (t.splitMode === "custom") {
-      const totalShares = Object.values(t.shares).reduce((a, b) => a + b, 0);
-      Object.entries(t.shares).forEach(([id, s]) => {
-        shareMap[id] = amount * (s / totalShares);
+      // ถ้าไม่มีใครเลือก ให้ผู้จ่ายคนเดียว
+      const ids = t.participants && t.participants.length ? t.participants : [payer];
+      const cut = amount / ids.length;
+      ids.forEach((id) => {
+        if (id !== payer) shareMap[id] = cut; // ลดเฉพาะคนอื่น
       });
+    } else if (t.splitMode === "custom") {
+      // คำนวณตามสัดส่วนที่กำหนด
+      const totalShares = Object.values(t.shares || {}).reduce((a, b) => a + b, 0);
+      if (totalShares > 0) {
+        Object.entries(t.shares).forEach(([id, s]) => {
+          if (id !== payer) shareMap[id] = amount * (s / totalShares);
+        });
+      }
     }
 
+    // ลดจากผู้ที่ต้องจ่าย
     Object.entries(shareMap).forEach(([uid, owe]) => {
       bal[uid] -= owe;
     });
+
+    // บวกให้ผู้จ่ายเต็มจำนวน
     bal[payer] += amount;
   });
 
   return bal;
 }
+
 
 // Render summary
 function renderSummary() {
@@ -227,18 +240,22 @@ addTxnBtn.onclick = () => {
   const mode = splitMode.value;
   let participants = [];
 
-  document.querySelectorAll('#participantsCheckboxes input[type="checkbox"]').forEach((ch) => {
-    if (ch.checked) participants.push(ch.dataset.id);
-  });
+  document
+    .querySelectorAll('#participantsCheckboxes input[type="checkbox"]')
+    .forEach((ch) => {
+      if (ch.checked) participants.push(ch.dataset.id);
+    });
 
   let shares = null;
 
   if (mode === "custom") {
     shares = {};
-    document.querySelectorAll("#customShares input.custom-share-input").forEach((inp) => {
-      const val = parseFloat(inp.value);
-      if (!isNaN(val) && val > 0) shares[inp.dataset.id] = val;
-    });
+    document
+      .querySelectorAll("#customShares input.custom-share-input")
+      .forEach((inp) => {
+        const val = parseFloat(inp.value);
+        if (!isNaN(val) && val > 0) shares[inp.dataset.id] = val;
+      });
 
     if (Object.keys(shares).length === 0)
       return Swal.fire({
@@ -257,8 +274,7 @@ addTxnBtn.onclick = () => {
       confirmButtonText: "ตกลง",
     });
 
-  if (participants.length === 0)
-    participants = state.people.map((p) => p.id);
+  if (participants.length === 0) participants = state.people.map((p) => p.id);
 
   state.txns.push({
     id: uid(),
