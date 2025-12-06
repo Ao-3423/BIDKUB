@@ -63,7 +63,11 @@ function renderTxns() {
       <div>
         <strong>${t.desc}</strong>
         <div class='smalltext'>
-          ${t.amount.toFixed(2)} THB • Payer: ${payer ? payer.name : "-"}
+        ${t.amount
+          .toFixed(0)
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ",")} THB • Payer: ${
+      payer ? payer.name : "-"
+    }
         </div>
       </div>
       <div><button data-id='${t.id}' class='del'>ลบ</button></div>
@@ -159,7 +163,9 @@ function renderSummary() {
   Object.entries(bal).forEach(([id, v]) => {
     const p = state.people.find((x) => x.id === id);
     const div = document.createElement("div");
-    div.textContent = `${p.name}: ${v.toFixed(2)} THB`;
+    div.textContent = `${p.name}: ${v
+      .toFixed(0)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")} THB`;
     summaryBalances.appendChild(div);
   });
 }
@@ -207,7 +213,9 @@ function renderSettlements() {
     const from = state.people.find((p) => p.id === r.from).name;
     const to = state.people.find((p) => p.id === r.to).name;
     const li = document.createElement("li");
-    li.textContent = `${from} → ${to}: ${r.amount.toFixed(2)} THB`;
+    li.textContent = `${from} → ${to}: ${r.amount
+      .toFixed(0)
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")} THB`;
     settlementList.appendChild(li);
   });
 }
