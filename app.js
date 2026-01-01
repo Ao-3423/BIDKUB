@@ -24,6 +24,9 @@ splitMode.addEventListener("change", () => {
     splitMode.value === "custom" ? "block" : "none";
 });
 
+// ===== เพิ่ม: ฟังก์ชันปัดเศษ =====
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
 // Load state
 let state = JSON.parse(
   localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}'
@@ -70,7 +73,7 @@ function renderSplitControls() {
   });
 }
 
-// Render Transactions (เพิ่ม: แสดงคนที่หาร)
+// Render Transactions
 function renderTxns() {
   txnList.innerHTML = "";
 
@@ -137,7 +140,7 @@ function loadEditTxn(id) {
   }
 }
 
-// Calculate Balances
+// ===== Calculate Balances (เพิ่ม round2) =====
 function calculateBalances() {
   const bal = {};
   state.people.forEach((p) => (bal[p.id] = 0));
@@ -146,12 +149,12 @@ function calculateBalances() {
     let shares = {};
 
     if (t.splitMode === "equal") {
-      const cut = t.amount / state.people.length;
+      const cut = round2(t.amount / state.people.length);
       state.people.forEach((p) => (shares[p.id] = cut));
     }
 
     if (t.splitMode === "participants") {
-      const cut = t.amount / t.participants.length;
+      const cut = round2(t.amount / t.participants.length);
       t.participants.forEach((id) => (shares[id] = cut));
     }
 
@@ -161,15 +164,17 @@ function calculateBalances() {
 
       const auto = t.participants.filter((id) => !t.shares?.[id]);
       const remain = t.amount - used;
-      const autoShare = auto.length ? remain / auto.length : 0;
+      const autoShare = auto.length ? round2(remain / auto.length) : 0;
 
       t.participants.forEach(
-        (id) => (shares[id] = t.shares?.[id] || autoShare)
+        (id) => (shares[id] = round2(t.shares?.[id] || autoShare))
       );
     }
 
-    Object.entries(shares).forEach(([id, amt]) => (bal[id] -= amt));
-    bal[t.payerId] += t.amount;
+    Object.entries(shares).forEach(
+      ([id, amt]) => (bal[id] = round2(bal[id] - amt))
+    );
+    bal[t.payerId] = round2(bal[t.payerId] + t.amount);
   });
 
   return bal;
@@ -200,7 +205,7 @@ function renderSettlements() {
 
   let i = 0, j = 0;
   while (i < debt.length && j < credit.length) {
-    const pay = Math.min(debt[i].amt, credit[j].amt);
+    const pay = round2(Math.min(debt[i].amt, credit[j].amt));
     const li = document.createElement("li");
     li.textContent = `${
       state.people.find((p) => p.id === debt[i].id).name
@@ -209,8 +214,8 @@ function renderSettlements() {
     }: ${pay.toLocaleString()} THB`;
     settlementList.appendChild(li);
 
-    debt[i].amt -= pay;
-    credit[j].amt -= pay;
+    debt[i].amt = round2(debt[i].amt - pay);
+    credit[j].amt = round2(credit[j].amt - pay);
     if (debt[i].amt <= 0) i++;
     if (credit[j].amt <= 0) j++;
   }
