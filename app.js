@@ -1,8 +1,6 @@
 // DOM elements
 const txnList = document.getElementById("txnList");
-const participantsCheckboxes = document.getElementById(
-  "participantsCheckboxes"
-);
+const participantsCheckboxes = document.getElementById("participantsCheckboxes");
 const customShares = document.getElementById("customShares");
 const addPersonBtn = document.getElementById("addPersonBtn");
 const personName = document.getElementById("personName");
@@ -20,9 +18,10 @@ const participantsBox = document.getElementById("participantsBox");
 const customSharesBox = document.getElementById("customSharesBox");
 
 splitMode.addEventListener("change", () => {
-  const mode = splitMode.value;
-  participantsBox.style.display = mode === "participants" ? "block" : "none";
-  customSharesBox.style.display = mode === "custom" ? "block" : "none";
+  participantsBox.style.display =
+    splitMode.value === "participants" ? "block" : "none";
+  customSharesBox.style.display =
+    splitMode.value === "custom" ? "block" : "none";
 });
 
 // Load state
@@ -30,19 +29,18 @@ let state = JSON.parse(
   localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}'
 );
 
-// UID generator
-function uid() {
-  return Math.random().toString(36).substr(2, 9);
-}
+let editTxnId = null;
 
-// Save state
-function save() {
+// UID
+const uid = () => Math.random().toString(36).substr(2, 9);
+
+// Save
+const save = () =>
   localStorage.setItem("bidkub_state", JSON.stringify(state));
-}
 
-// Render People to dropdown and split UI
+// Render People
 function renderPeople() {
-  txnPayer.innerHTML = "";
+  txnPayer.innerHTML = `<option value="">ผู้จ่าย</option>`;
   state.people.forEach((p) => {
     const opt = document.createElement("option");
     opt.value = p.id;
@@ -52,341 +50,245 @@ function renderPeople() {
   renderSplitControls();
 }
 
-// Render Transactions List
-function renderTxns() {
-  txnList.innerHTML = "";
-  state.txns.forEach((t) => {
-    const li = document.createElement("li");
-    li.className = "txn-item";
-    const payer = state.people.find((p) => p.id === t.payerId);
-    li.innerHTML = `
-      <div>
-        <strong>${t.desc}</strong>
-        <div class='smalltext'>
-        ${t.amount
-          .toFixed(0)
-          .replace(/\B(?=(\d{3})+(?!\d))/g, ",")} THB • Payer: ${
-      payer ? payer.name : "-"
-    }
-        </div>
-      </div>
-      <div><button data-id='${t.id}' class='del'>ลบ</button></div>
-    `;
-    txnList.appendChild(li);
-  });
-
-  // Delete button
-  document.querySelectorAll(".txn-item .del").forEach((btn) => {
-    btn.onclick = (e) => {
-      const id = e.target.dataset.id;
-      state.txns = state.txns.filter((x) => x.id !== id);
-      save();
-      rerenderAll();
-    };
-  });
-}
-
-// Render participant checkboxes & custom input
+// Render Split Controls
 function renderSplitControls() {
   participantsCheckboxes.innerHTML = "";
   customShares.innerHTML = "";
 
   state.people.forEach((p) => {
-    const id = p.id;
-
     const chip = document.createElement("label");
-    chip.className = "participant-chip";
-    chip.innerHTML = `<input type='checkbox' data-id='${id}' checked /> ${p.name}`;
+    chip.innerHTML = `<input type="checkbox" data-id="${p.id}" checked> ${p.name}`;
     participantsCheckboxes.appendChild(chip);
 
-    const cs = document.createElement("div");
-    cs.className = "row";
-    cs.innerHTML = `
-      <div style='flex:1'>${p.name}</div>
-      <input class='custom-share-input' data-id='${id}' placeholder='share (eg 1)' />
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div style="flex:1">${p.name}</div>
+      <input class="custom-share-input" data-id="${p.id}" placeholder="กำหนด (เว้นว่าง = อัตโนมัติ)">
     `;
-    customShares.appendChild(cs);
+    customShares.appendChild(row);
   });
 }
-// Calculate balances
+
+// Render Transactions (เพิ่ม: แสดงคนที่หาร)
+function renderTxns() {
+  txnList.innerHTML = "";
+
+  state.txns.forEach((t) => {
+    const payer = state.people.find((p) => p.id === t.payerId);
+
+    const participantNames = t.participants
+      .map((id) => state.people.find((p) => p.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div>
+        <strong>${t.desc}</strong>
+        <div class="smalltext">
+          ${t.amount.toLocaleString()} THB • ผู้จ่าย: ${payer?.name || "-"}
+        </div>
+        <div class="muted small">
+          หารกับ: ${participantNames || "-"}
+        </div>
+      </div>
+      <div>
+        <button class="edit" data-id="${t.id}">แก้ไข</button>
+        <button class="del" data-id="${t.id}">ลบ</button>
+      </div>
+    `;
+    txnList.appendChild(li);
+  });
+
+  document.querySelectorAll(".del").forEach((b) => {
+    b.onclick = () => {
+      state.txns = state.txns.filter((x) => x.id !== b.dataset.id);
+      save();
+      rerenderAll();
+    };
+  });
+
+  document.querySelectorAll(".edit").forEach((b) => {
+    b.onclick = () => loadEditTxn(b.dataset.id);
+  });
+}
+
+// Load edit
+function loadEditTxn(id) {
+  const t = state.txns.find((x) => x.id === id);
+  if (!t) return;
+
+  editTxnId = id;
+  txnDesc.value = t.desc;
+  txnAmount.value = t.amount;
+  txnPayer.value = t.payerId;
+  splitMode.value = t.splitMode;
+  splitMode.dispatchEvent(new Event("change"));
+
+  document
+    .querySelectorAll("#participantsCheckboxes input")
+    .forEach((c) => (c.checked = t.participants.includes(c.dataset.id)));
+
+  if (t.splitMode === "custom") {
+    document.querySelectorAll(".custom-share-input").forEach((i) => {
+      i.value = t.shares?.[i.dataset.id] || "";
+    });
+  }
+}
+
+// Calculate Balances
 function calculateBalances() {
   const bal = {};
   state.people.forEach((p) => (bal[p.id] = 0));
 
   state.txns.forEach((t) => {
-    const payer = t.payerId;
-    const amount = t.amount;
-    let shareMap = {};
+    let shares = {};
 
     if (t.splitMode === "equal") {
-      // หารเท่าๆ ทุกคน
-      const ids = state.people.map((p) => p.id);
-      const cut = amount / ids.length;
-      ids.forEach((id) => (shareMap[id] = cut));
-    } else if (t.splitMode === "participants") {
-      // ถ้าไม่มีใครเลือก ให้ผู้จ่ายคนเดียว
-      const ids =
-        t.participants && t.participants.length ? t.participants : [payer];
-      const cut = amount / ids.length;
-      ids.forEach((id) => {
-        if (id !== payer) shareMap[id] = cut; // ลดเฉพาะคนอื่น
-      });
-    } else if (t.splitMode === "custom") {
-      // คำนวณตามสัดส่วนที่กำหนด
-      const totalShares = Object.values(t.shares || {}).reduce(
-        (a, b) => a + b,
-        0
-      );
-      if (totalShares > 0) {
-        Object.entries(t.shares).forEach(([id, s]) => {
-          if (id !== payer) shareMap[id] = amount * (s / totalShares);
-        });
-      }
+      const cut = t.amount / state.people.length;
+      state.people.forEach((p) => (shares[p.id] = cut));
     }
 
-    // ลดจากผู้ที่ต้องจ่าย
-    Object.entries(shareMap).forEach(([uid, owe]) => {
-      bal[uid] -= owe;
-    });
+    if (t.splitMode === "participants") {
+      const cut = t.amount / t.participants.length;
+      t.participants.forEach((id) => (shares[id] = cut));
+    }
 
-    // บวกให้ผู้จ่ายเต็มจำนวน
-    bal[payer] += amount;
+    if (t.splitMode === "custom") {
+      let used = 0;
+      Object.entries(t.shares || {}).forEach(([id, v]) => (used += v));
+
+      const auto = t.participants.filter((id) => !t.shares?.[id]);
+      const remain = t.amount - used;
+      const autoShare = auto.length ? remain / auto.length : 0;
+
+      t.participants.forEach(
+        (id) => (shares[id] = t.shares?.[id] || autoShare)
+      );
+    }
+
+    Object.entries(shares).forEach(([id, amt]) => (bal[id] -= amt));
+    bal[t.payerId] += t.amount;
   });
 
   return bal;
 }
 
-// Render summary
+// Summary
 function renderSummary() {
-  const bal = calculateBalances();
   summaryBalances.innerHTML = "";
+  const bal = calculateBalances();
   Object.entries(bal).forEach(([id, v]) => {
     const p = state.people.find((x) => x.id === id);
     const div = document.createElement("div");
-    div.textContent = `${p.name}: ${v
-      .toFixed(0)
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")} THB`;
+    div.textContent = `${p.name}: ${v.toLocaleString()} THB`;
     summaryBalances.appendChild(div);
   });
 }
 
 // Settlement
-function generateSettlements() {
+function renderSettlements() {
+  settlementList.innerHTML = "";
   const bal = calculateBalances();
-  let debtors = [],
-    creditors = [];
+  const debt = [], credit = [];
 
   Object.entries(bal).forEach(([id, v]) => {
-    if (v < -0.01) debtors.push({ id, amt: -v });
-    if (v > 0.01) creditors.push({ id, amt: v });
+    if (v < 0) debt.push({ id, amt: -v });
+    if (v > 0) credit.push({ id, amt: v });
   });
 
-  debtors.sort((a, b) => b.amt - a.amt);
-  creditors.sort((a, b) => b.amt - a.amt);
+  let i = 0, j = 0;
+  while (i < debt.length && j < credit.length) {
+    const pay = Math.min(debt[i].amt, credit[j].amt);
+    const li = document.createElement("li");
+    li.textContent = `${
+      state.people.find((p) => p.id === debt[i].id).name
+    } → ${
+      state.people.find((p) => p.id === credit[j].id).name
+    }: ${pay.toLocaleString()} THB`;
+    settlementList.appendChild(li);
 
-  const results = [];
-  let i = 0,
-    j = 0;
+    debt[i].amt -= pay;
+    credit[j].amt -= pay;
+    if (debt[i].amt <= 0) i++;
+    if (credit[j].amt <= 0) j++;
+  }
+}
 
-  while (i < debtors.length && j < creditors.length) {
-    const d = debtors[i],
-      c = creditors[j];
-    const pay = Math.min(d.amt, c.amt);
+// Add / Update Txn
+addTxnBtn.onclick = () => {
+  const amount = +txnAmount.value;
+  if (!amount) return;
 
-    results.push({ from: d.id, to: c.id, amount: pay });
+  const participants = [...document.querySelectorAll("#participantsCheckboxes input:checked")]
+    .map((c) => c.dataset.id);
 
-    d.amt -= pay;
-    c.amt -= pay;
+  const shares = {};
+  document.querySelectorAll(".custom-share-input").forEach((i) => {
+    if (i.value) shares[i.dataset.id] = +i.value;
+  });
 
-    if (d.amt <= 0.01) i++;
-    if (c.amt <= 0.01) j++;
+  const data = {
+    id: editTxnId || uid(),
+    desc: txnDesc.value || "Expense",
+    amount,
+    payerId: txnPayer.value,
+    splitMode: splitMode.value,
+    participants: participants.length ? participants : state.people.map((p) => p.id),
+    shares,
+  };
+
+  if (editTxnId) {
+    state.txns = state.txns.map((t) => (t.id === editTxnId ? data : t));
+    editTxnId = null;
+  } else {
+    state.txns.push(data);
   }
 
-  return results;
-}
+  txnDesc.value = txnAmount.value = "";
+  save();
+  rerenderAll();
+};
 
-// Render settlement list
-function renderSettlements() {
-  const result = generateSettlements();
-  settlementList.innerHTML = "";
-  result.forEach((r) => {
-    const from = state.people.find((p) => p.id === r.from).name;
-    const to = state.people.find((p) => p.id === r.to).name;
-    const li = document.createElement("li");
-    li.textContent = `${from} → ${to}: ${r.amount
-      .toFixed(0)
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")} THB`;
-    settlementList.appendChild(li);
-  });
-}
+// Clear
+clearBtn.onclick = () => {
+  state = { people: [], txns: [] };
+  save();
+  rerenderAll();
+};
 
 // Add person
 addPersonBtn.onclick = () => {
-  const name = personName.value.trim();
-  if (!name)
-    return Swal.fire({
-      icon: "warning",
-      title: "กรุณากรอกชื่อ",
-      confirmButtonText: "ตกลง",
-    });
-
-  state.people.push({ id: uid(), name });
+  if (!personName.value) return;
+  state.people.push({ id: uid(), name: personName.value });
   personName.value = "";
   save();
   rerenderAll();
 };
 
-// Add transaction
-addTxnBtn.onclick = () => {
-  const desc = txnDesc.value.trim() || "Expense";
-  const amount = parseFloat(txnAmount.value);
-
-  if (!amount || amount <= 0)
-    return Swal.fire({
-      icon: "error",
-      title: "ราคาต้องมากกว่า 0",
-      confirmButtonText: "ตกลง",
-    });
-
-  const payerId = txnPayer.value;
-  if (!payerId)
-    return Swal.fire({
-      icon: "warning",
-      title: "กรุณาเลือกผู้จ่าย",
-      confirmButtonText: "ตกลง",
-    });
-
-  const mode = splitMode.value;
-  let participants = [];
-
-  document
-    .querySelectorAll('#participantsCheckboxes input[type="checkbox"]')
-    .forEach((ch) => {
-      if (ch.checked) participants.push(ch.dataset.id);
-    });
-
-  let shares = null;
-
-  if (mode === "custom") {
-    shares = {};
-    document
-      .querySelectorAll("#customShares input.custom-share-input")
-      .forEach((inp) => {
-        const val = parseFloat(inp.value);
-        if (!isNaN(val) && val > 0) shares[inp.dataset.id] = val;
-      });
-
-    if (Object.keys(shares).length === 0)
-      return Swal.fire({
-        icon: "info",
-        title: "ต้องใส่สัดส่วนอย่างน้อย 1 คน",
-        confirmButtonText: "ตกลง",
-      });
-
-    participants = Object.keys(shares);
-  }
-
-  if (mode === "participants" && participants.length === 0)
-    return Swal.fire({
-      icon: "warning",
-      title: "เลือกคนที่หารก่อน",
-      confirmButtonText: "ตกลง",
-    });
-
-  if (participants.length === 0) participants = state.people.map((p) => p.id);
-
-  state.txns.push({
-    id: uid(),
-    desc,
-    amount,
-    payerId,
-    splitMode: mode,
-    participants,
-    shares,
-  });
-
-  txnDesc.value = "";
-  txnAmount.value = "";
-
-  save();
-  rerenderAll();
-};
-
-// Export JSON
+// Export / Import
 exportBtn.onclick = () => {
-  const dataStr = JSON.stringify(state, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+  const blob = new Blob([JSON.stringify(state, null, 2)], {
+    type: "application/json",
+  });
   const a = document.createElement("a");
-  a.href = url;
+  a.href = URL.createObjectURL(blob);
   a.download = "bidkub-data.json";
   a.click();
-  URL.revokeObjectURL(url);
-
-  Swal.fire({
-    icon: "success",
-    title: "ส่งออกข้อมูลเรียบร้อย!",
-    confirmButtonText: "ตกลง",
-  });
 };
 
-// Import JSON
 importFile.onchange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const json = JSON.parse(ev.target.result);
-      if (!json.people || !json.txns)
-        return Swal.fire({
-          icon: "error",
-          title: "ไฟล์ไม่ถูกต้อง",
-          confirmButtonText: "ตกลง",
-        });
-
-      state = json;
-      save();
-      rerenderAll();
-
-      Swal.fire({
-        icon: "success",
-        title: "นำเข้าข้อมูลสำเร็จ!",
-        confirmButtonText: "ตกลง",
-      });
-    } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "ไม่สามารถอ่านไฟล์ JSON ได้",
-        confirmButtonText: "ตกลง",
-      });
-    }
+  const r = new FileReader();
+  r.onload = () => {
+    state = JSON.parse(r.result);
+    save();
+    rerenderAll();
   };
-
-  reader.readAsText(file);
+  r.readAsText(e.target.files[0]);
 };
 
-// Clear all
-clearBtn.onclick = () => {
-  Swal.fire({
-    title: "ลบข้อมูลทั้งหมด?",
-    text: "ข้อมูลทั้งหมดจะหายไปถาวร",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "ลบเลย",
-    cancelButtonText: "ยกเลิก",
-  }).then((result) => {
-    if (result.isConfirmed) {
-      state = { people: [], txns: [] };
-      save();
-      rerenderAll();
-      Swal.fire({ icon: "success", title: "ลบข้อมูลแล้ว!" });
-    }
-  });
-};
-
-// Auto render + auto calculate
+// Rerender
 function rerenderAll() {
   renderPeople();
   renderTxns();
@@ -394,5 +296,5 @@ function rerenderAll() {
   renderSettlements();
 }
 
-// Initial load
+// Init
 rerenderAll();

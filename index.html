@@ -6,16 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>BIDKUB</title>
     <link rel="icon" href="imgs/Bidkub.png" type="image/png" />
+
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
     <!-- Main CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <!-- Main App Wrapper -->
     <div class="app">
 
         <!-- Header -->
@@ -36,19 +38,19 @@
             <!-- Add person -->
             <section class="card">
                 <h2>เพิ่มสมาชิก</h2>
-
                 <div class="row add-person-row">
                     <input id="personName" type="text" placeholder="ชื่อ (เช่น สมชาย)">
                     <button id="addPersonBtn" class="btn blue">เพิ่ม</button>
                 </div>
-
                 <div id="peopleList" class="muted small"></div>
             </section>
 
-            <!-- เพิ่มรายการ -->
+            <!-- Add transaction -->
             <section class="card">
                 <h2>เพิ่มรายการ</h2>
+
                 <input id="txnDesc" type="text" placeholder="รายละเอียด (เช่น อาหารเย็น)" style="margin-bottom:10px;">
+
                 <div class="row" style="margin-bottom:10px;">
                     <input id="txnAmount" type="number" inputmode="decimal" placeholder="จำนวนเงิน (THB)">
                     <select id="txnPayer">
@@ -71,24 +73,28 @@
                 <div id="customSharesBox" class="sub-box" style="display:none;">
                     <h3 class="muted small">กำหนดสัดส่วนสมาชิก</h3>
                     <div id="customShares"></div>
+                    <p class="muted small" style="margin-top:6px;">
+                        * กรอกเฉพาะคนที่ต้องการกำหนดเอง ที่เหลือระบบจะคำนวณให้อัตโนมัติ
+                    </p>
                 </div>
-                <button id="addTxnBtn" class="btn full" style="margin-top:10px;">เพิ่มรายการ</button>
+
+                <button id="addTxnBtn" class="btn full" style="margin-top:10px;">
+                    เพิ่มรายการ
+                </button>
             </section>
 
-            <!-- All transactions -->
-            <section class="card">
+            <!-- Transactions list -->
+            <section class="card" id="reportArea">
                 <h2>รายการทั้งหมด</h2>
                 <ul id="txnList" class="list"></ul>
-            </section>
 
-            <!-- Summary -->
-            <section class="card">
+                <hr style="margin:12px 0">
+
                 <h2>สรุปยอดคงเหลือ</h2>
                 <div id="summaryBalances" class="small"></div>
-            </section>
 
-            <!-- Settlements -->
-            <section class="card">
+                <hr style="margin:12px 0">
+
                 <h2>รายการชำระหนี้</h2>
                 <ul id="settlementList" class="list"></ul>
             </section>
@@ -110,16 +116,64 @@
                 </div>
             </section>
 
+            <!-- PDF -->
+            <section class="card">
+                <h2>ส่งออกรายงาน</h2>
+                <button id="exportPdfBtn" class="btn full">
+                    ส่งออกเป็น PDF
+                </button>
+            </section>
+
             <!-- Clear -->
             <section class="card">
                 <h2 class="muted">จัดการข้อมูล</h2>
-                <button id="clearBtn" class="btn full red">ล้างข้อมูลทั้งหมด</button>
+                <button id="clearBtn" class="btn full red">
+                    ล้างข้อมูลทั้งหมด
+                </button>
             </section>
-        </main>
 
+        </main>
     </div>
+
+    <!-- PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <!-- JS -->
     <script src="app.js"></script>
+<script>
+document.getElementById("exportPdfBtn").addEventListener("click", async () => {
+    const element = document.getElementById("reportArea");
+
+    if (!element || element.innerText.trim() === "") {
+        Swal.fire({
+            icon: "warning",
+            title: "ยังไม่มีข้อมูล",
+            text: "กรุณาเพิ่มรายการก่อนส่งออก PDF",
+        });
+        return;
+    }
+
+    // 🔥 เปิดโหมด PDF
+    document.body.classList.add("pdf-export");
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const opt = {
+        margin: 10,
+        filename: 'BIDKUB-report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    await html2pdf().set(opt).from(element).save();
+
+    // 🔥 ปิดโหมด PDF (UI กลับเหมือนเดิม)
+    document.body.classList.remove("pdf-export");
+});
+</script>
+
+
 </body>
 
 </html>

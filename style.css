@@ -1,4 +1,4 @@
-/* Global  */
+/* Global */
 * {
     margin: 0;
     padding: 0;
@@ -37,13 +37,11 @@ body {
 
 .header .brand-text h1 {
     font-size: 22px;
-    margin: 0;
     font-weight: 700;
     color: #2a8cfb;
 }
 
 .header .brand-text .sub {
-    margin: 0;
     font-size: 13px;
     color: #6c7a89;
 }
@@ -52,7 +50,6 @@ body {
     padding: 5px 10px;
     background: rgba(255, 255, 255, 0.75);
     border-radius: 12px;
-    backdrop-filter: blur(6px);
     border: 1px solid rgba(30, 75, 140, 0.08);
     font-size: 12px;
     color: #6c7a89;
@@ -60,29 +57,21 @@ body {
 
 .header .logo-img {
     width: 40px;
-    height: auto;
 }
 
-/* Grid Layout */
+/* Grid */
 .grid {
     display: grid;
     gap: 24px;
-    grid-template-columns: 1fr;
 }
 
-/*Card */
+/* Card */
 .card {
     background: #ffffff;
     padding: 22px;
     border-radius: 18px;
     box-shadow: 0 6px 20px rgba(120, 183, 255, 0.25);
     border-left: 6px solid #4ca9ff;
-    transition: 0.25s;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(120, 183, 255, 0.32);
 }
 
 .card h2 {
@@ -100,14 +89,12 @@ select {
     border: 2px solid #d7edff;
     font-size: 16px;
     background: #f8fbff;
-    transition: 0.25s;
 }
 
 input:focus,
 select:focus {
     outline: none;
     border-color: #4ca9ff;
-    background: #ffffff;
     box-shadow: 0 0 0 4px rgba(76, 169, 255, 0.12);
 }
 
@@ -118,54 +105,37 @@ select:focus {
     border-radius: 14px;
     background: linear-gradient(135deg, #6ecbff, #4ca9ff);
     color: white;
-    font-size: 17px;
+    font-size: 16px;
     cursor: pointer;
-    transition: 0.25s;
-    box-shadow: 0 4px 12px rgba(80, 170, 255, 0.35);
-}
-
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(80, 170, 255, 0.42);
-}
-
-.btn:active {
-    transform: scale(0.97);
 }
 
 .btn.full {
     width: 100%;
 }
 
-/* Variants */
 .btn.blue {
     background: linear-gradient(135deg, #4ca9ff, #1f90ff);
-}
-
-.btn.green {
-    background: linear-gradient(135deg, #9dfdff, #62e8f2);
-    color: #033d48;
 }
 
 .btn.red {
     background: linear-gradient(135deg, #ff6b6b, #ff4646);
 }
 
-/* Utility */
+/* Layout helpers */
 .row {
     display: flex;
     gap: 8px;
-}
-
-.import-btn.btn {
-    cursor: pointer;
 }
 
 .muted {
     color: #666;
 }
 
-/* Sub-box  */
+.small {
+    font-size: 14px;
+}
+
+/* Sub box */
 .sub-box {
     background: #f0f8ff;
     border: 2px solid #c8e4ff;
@@ -174,62 +144,67 @@ select:focus {
     margin-top: 10px;
 }
 
-.sub-box h3 {
-    font-size: 15px;
-    margin-bottom: 8px;
-    color: #2a8cfb;
-}
+/* ==== LIST IMPROVEMENT ==== */
 
-/* List */
+/* Scroll when list is long */
 .list {
     list-style: none;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
 }
 
+/* Transaction / settlement item */
 .list li {
     background: #f1f8ff;
     padding: 14px;
-    border-radius: 12px;
+    border-radius: 14px;
     border: 2px solid #d0e7ff;
     margin-bottom: 10px;
-    font-size: 15px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
 }
 
+/* Left text */
+.list li strong {
+    font-size: 15px;
+}
+
+.smalltext {
+    font-size: 13px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Buttons inside list */
 .list button {
-    padding: 7px 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 13px;
     border: none;
+    cursor: pointer;
     background: #4ca9ff;
     color: white;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.25s;
 }
 
-.list button:hover {
-    background: #1d8cf7;
+.list button.edit {
+    background: #ffa502;
 }
 
-/* Import Button */
-.import-btn {
-    display: block;
-    background: #f6fbff;
-    padding: 16px;
-    border-radius: 14px;
-    text-align: center;
-    cursor: pointer;
-    border: 2px dashed #aedcff;
-    color: #2a8cfb;
-    font-weight: bold;
-    transition: 0.25s;
+.list button.del {
+    background: #ff6b6b;
 }
 
-.import-btn:hover {
-    background: #e9f5ff;
+/* Settlement list highlight */
+#settlementList li {
+    background: #fff7e6;
+    border-color: #ffd591;
+    font-weight: 500;
 }
 
-/* Bigger Checkboxes */
+/* Participants */
 #participantsCheckboxes label {
     display: flex;
     align-items: center;
@@ -240,56 +215,34 @@ select:focus {
     border-radius: 14px;
     border: 1px solid #d0d0d0;
     cursor: pointer;
-    font-size: 16px;
 }
 
-#participantsCheckboxes input[type="checkbox"] {
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
+#participantsCheckboxes input {
+    width: 22px;
+    height: 22px;
     accent-color: #2a8cfb;
 }
 
-/* SweetAlert2 Theme */
-.swal2-popup {
-    border-radius: 18px !important;
-    padding: 28px !important;
-    background: #ffffff !important;
-    box-shadow: 0 10px 26px rgba(120, 183, 255, 0.40) !important;
+/* Custom share input */
+.custom-share-input {
+    width: 100px;
+    padding: 8px;
+    font-size: 14px;
 }
 
-.swal2-title {
-    font-size: 22px !important;
-    color: #2a8cfb !important;
-    font-weight: 700 !important;
+/* Import */
+.import-btn {
+    background: #f6fbff;
+    padding: 16px;
+    border-radius: 14px;
+    border: 2px dashed #aedcff;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+    color: #2a8cfb;
 }
 
-.swal2-html-container {
-    font-size: 16px !important;
-    color: #555 !important;
-}
-
-.swal2-confirm {
-    background: #2a8cfb !important;
-    border-radius: 12px !important;
-    padding: 12px 28px !important;
-    font-size: 16px !important;
-    box-shadow: 0 3px 10px rgba(76, 169, 255, 0.4) !important;
-}
-
-.swal2-cancel {
-    background: #ff5858 !important;
-    border-radius: 12px !important;
-    padding: 12px 28px !important;
-    font-size: 16px !important;
-    color: white !important;
-}
-
-.swal2-backdrop-show {
-    background: rgba(185, 220, 255, 0.5) !important;
-    backdrop-filter: blur(3px);
-}
-
+/* Add person row */
 .add-person-row {
     display: flex;
     gap: 10px;
@@ -299,8 +252,25 @@ select:focus {
     flex: 1;
 }
 
-.add-person-row .btn {
-    padding: 14px 20px;
-    /* ปรับปุ่มให้สมส่วน */
-    white-space: nowrap;
+/* ===== PDF MODE ===== */
+.pdf-export .list {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.pdf-export .card {
+    page-break-inside: avoid;
+}
+/* ===== PDF EXPORT MODE ===== */
+body.pdf-export .list {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+body.pdf-export #reportArea {
+    overflow: visible !important;
+}
+
+body.pdf-export .card {
+    box-shadow: none !important;
 }
