@@ -1,6 +1,8 @@
 // DOM elements
 const txnList = document.getElementById("txnList");
-const participantsCheckboxes = document.getElementById("participantsCheckboxes");
+const participantsCheckboxes = document.getElementById(
+  "participantsCheckboxes"
+);
 const customShares = document.getElementById("customShares");
 const addPersonBtn = document.getElementById("addPersonBtn");
 const personName = document.getElementById("personName");
@@ -156,6 +158,9 @@ function loadEditTxn(id) {
       i.value = t.shares?.[i.dataset.id] ?? "";
     });
   }
+
+  // ⬆️ เด้งขึ้นบนเมื่อกดแก้ไข
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ===== Calculate Balances =====
@@ -186,8 +191,7 @@ function calculateBalances() {
 
       let acc = 0;
       auto.forEach((id, idx) => {
-        shares[id] =
-          idx === auto.length - 1 ? round2(remain - acc) : base;
+        shares[id] = idx === auto.length - 1 ? round2(remain - acc) : base;
         acc += shares[id];
       });
 
@@ -200,9 +204,7 @@ function calculateBalances() {
 
       state.people.forEach((p, idx) => {
         shares[p.id] =
-          idx === state.people.length - 1
-            ? round2(t.amount - acc)
-            : base;
+          idx === state.people.length - 1 ? round2(t.amount - acc) : base;
         acc += shares[p.id];
       });
     }
@@ -213,9 +215,7 @@ function calculateBalances() {
 
       t.participants.forEach((id, idx) => {
         shares[id] =
-          idx === t.participants.length - 1
-            ? round2(t.amount - acc)
-            : base;
+          idx === t.participants.length - 1 ? round2(t.amount - acc) : base;
         acc += shares[id];
       });
     }
@@ -317,9 +317,7 @@ function buildShareDetails(t) {
     let acc = 0;
     state.people.forEach((p, idx) => {
       shares[p.id] =
-        idx === state.people.length - 1
-          ? round2(t.amount - acc)
-          : base;
+        idx === state.people.length - 1 ? round2(t.amount - acc) : base;
       acc += shares[p.id];
     });
     return (
@@ -335,9 +333,7 @@ function buildShareDetails(t) {
     let acc = 0;
     t.participants.forEach((id, idx) => {
       shares[id] =
-        idx === t.participants.length - 1
-          ? round2(t.amount - acc)
-          : base;
+        idx === t.participants.length - 1 ? round2(t.amount - acc) : base;
       acc += shares[id];
     });
     return (
@@ -366,8 +362,7 @@ function buildShareDetails(t) {
 
     let acc = 0;
     auto.forEach((id, idx) => {
-      shares[id] =
-        idx === auto.length - 1 ? round2(remain - acc) : base;
+      shares[id] = idx === auto.length - 1 ? round2(remain - acc) : base;
       acc += shares[id];
     });
     Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
