@@ -1,4 +1,4 @@
-// ================= DOM =================
+// DOM elements
 const txnList = document.getElementById("txnList");
 const participantsCheckboxes = document.getElementById("participantsCheckboxes");
 const customShares = document.getElementById("customShares");
@@ -24,41 +24,40 @@ splitMode.addEventListener("change", () => {
     splitMode.value === "custom" ? "block" : "none";
 });
 
-// ================= Utils =================
+// ===== Utils =====
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
-const uid = () => Math.random().toString(36).slice(2, 10);
+const uid = () => Math.random().toString(36).substr(2, 9);
 
-// ================= State =================
-let state = normalizeState(
-  JSON.parse(localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}')
+// ===== State =====
+let state = JSON.parse(
+  localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}'
 );
 let editTxnId = null;
-const save = () =>
-  localStorage.setItem("bidkub_state", JSON.stringify(state));
+const save = () => localStorage.setItem("bidkub_state", JSON.stringify(state));
 
-// ================= Normalize =================
+// ===== 🔧 Normalize Imported State =====
 function normalizeState(state) {
-  state.people = state.people || [];
-  state.txns = state.txns || [];
-
   state.txns.forEach((t) => {
-    if (!t.splitMode) t.splitMode = "equal";
-    if (!t.participants) t.participants = [];
-    if (!t.shares) t.shares = {};
-
+    // equal = ทุกคน + ไม่ใช้ shares
     if (t.splitMode === "equal") {
       t.participants = state.people.map((p) => p.id);
       t.shares = {};
     }
 
+    // participants = ไม่ใช้ shares
     if (t.splitMode === "participants") {
-      t.participants = t.participants || [];
       t.shares = {};
     }
 
+    // custom = ใช้เฉพาะคนที่อยู่ใน participants
     if (t.splitMode === "custom") {
+      if (!t.shares) t.shares = {};
+      t.participants = t.participants || [];
+
       Object.keys(t.shares).forEach((id) => {
-        if (!t.participants.includes(id)) delete t.shares[id];
+        if (!t.participants.includes(id)) {
+          delete t.shares[id];
+        }
       });
     }
   });
@@ -66,7 +65,7 @@ function normalizeState(state) {
   return state;
 }
 
-// ================= Render People =================
+// ===== Render People =====
 function renderPeople() {
   txnPayer.innerHTML = `<option value="">ผู้จ่าย</option>`;
   state.people.forEach((p) => {
@@ -78,7 +77,7 @@ function renderPeople() {
   renderSplitControls();
 }
 
-// ================= Split Controls =================
+// ===== Render Split Controls =====
 function renderSplitControls() {
   participantsCheckboxes.innerHTML = "";
   customShares.innerHTML = "";
@@ -98,13 +97,13 @@ function renderSplitControls() {
   });
 }
 
-// ================= Render Transactions =================
+// ===== Render Transactions =====
 function renderTxns() {
   txnList.innerHTML = "";
 
   state.txns.forEach((t) => {
     const payer = state.people.find((p) => p.id === t.payerId);
-    const detail = buildShareDetails(t);
+    const splitDetail = buildShareDetails(t);
 
     const li = document.createElement("li");
     li.innerHTML = `
@@ -113,7 +112,7 @@ function renderTxns() {
         <div class="smalltext">
           ${t.amount.toLocaleString()} THB • ผู้จ่าย: ${payer?.name || "-"}
         </div>
-        <div class="muted small">${detail}</div>
+        <div class="muted small">${splitDetail}</div>
       </div>
       <div>
         <button class="edit" data-id="${t.id}">แก้ไข</button>
@@ -136,7 +135,7 @@ function renderTxns() {
   });
 }
 
-// ================= Load Edit =================
+// ===== Load Edit =====
 function loadEditTxn(id) {
   const t = state.txns.find((x) => x.id === id);
   if (!t) return;
@@ -150,36 +149,60 @@ function loadEditTxn(id) {
 
   document
     .querySelectorAll("#participantsCheckboxes input")
-    .forEach((c) => {
-      c.checked =
-        t.splitMode === "equal" || t.participants.includes(c.dataset.id);
-    });
+    .forEach((c) => (c.checked = t.participants.includes(c.dataset.id)));
 
   if (t.splitMode === "custom") {
     document.querySelectorAll(".custom-share-input").forEach((i) => {
-      i.value = t.shares[i.dataset.id] ?? "";
+      i.value = t.shares?.[i.dataset.id] ?? "";
     });
   }
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ================= Calculate =================
+// ===== Calculate Balances =====
 function calculateBalances() {
   const bal = {};
   state.people.forEach((p) => (bal[p.id] = 0));
 
   state.txns.forEach((t) => {
     const shares = {};
-    t.participants = t.participants || [];
-    t.shares = t.shares || {};
+
+    if (t.splitMode === "custom") {
+      let used = 0;
+      const fixed = {};
+      const auto = [];
+
+      t.participants.forEach((id) => {
+        if (t.shares?.[id] != null && t.shares[id] !== "") {
+          fixed[id] = round2(+t.shares[id]);
+          used += fixed[id];
+        } else {
+          auto.push(id);
+        }
+      });
+
+      const remain = round2(t.amount - used);
+      const base =
+        auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
+
+      let acc = 0;
+      auto.forEach((id, idx) => {
+        shares[id] =
+          idx === auto.length - 1 ? round2(remain - acc) : base;
+        acc += shares[id];
+      });
+
+      Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
+    }
 
     if (t.splitMode === "equal") {
       const base = Math.floor((t.amount / state.people.length) * 100) / 100;
       let acc = 0;
-      state.people.forEach((p, i) => {
+
+      state.people.forEach((p, idx) => {
         shares[p.id] =
-          i === state.people.length - 1 ? round2(t.amount - acc) : base;
+          idx === state.people.length - 1
+            ? round2(t.amount - acc)
+            : base;
         acc += shares[p.id];
       });
     }
@@ -187,32 +210,12 @@ function calculateBalances() {
     if (t.splitMode === "participants") {
       const base = Math.floor((t.amount / t.participants.length) * 100) / 100;
       let acc = 0;
-      t.participants.forEach((id, i) => {
+
+      t.participants.forEach((id, idx) => {
         shares[id] =
-          i === t.participants.length - 1 ? round2(t.amount - acc) : base;
-        acc += shares[id];
-      });
-    }
-
-    if (t.splitMode === "custom") {
-      let used = 0;
-      const auto = [];
-
-      t.participants.forEach((id) => {
-        if (t.shares[id] !== "" && t.shares[id] != null) {
-          shares[id] = round2(+t.shares[id]);
-          used += shares[id];
-        } else auto.push(id);
-      });
-
-      const remain = round2(t.amount - used);
-      const base =
-        auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
-      let acc = 0;
-
-      auto.forEach((id, i) => {
-        shares[id] =
-          i === auto.length - 1 ? round2(remain - acc) : base;
+          idx === t.participants.length - 1
+            ? round2(t.amount - acc)
+            : base;
         acc += shares[id];
       });
     }
@@ -226,7 +229,7 @@ function calculateBalances() {
   return bal;
 }
 
-// ================= Summary =================
+// ===== Summary =====
 function renderSummary() {
   summaryBalances.innerHTML = "";
   const bal = calculateBalances();
@@ -238,7 +241,7 @@ function renderSummary() {
   });
 }
 
-// ================= Settlement =================
+// ===== Settlement =====
 function renderSettlements() {
   settlementList.innerHTML = "";
   const bal = calculateBalances();
@@ -267,19 +270,56 @@ function renderSettlements() {
   }
 }
 
-// ================= Share Detail =================
+// ===== Import / Export =====
+exportBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {
+    type: "application/json",
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bidkub-data.json";
+  a.click();
+};
+
+importFile.onchange = (e) => {
+  const r = new FileReader();
+  r.onload = () => {
+    const imported = JSON.parse(r.result);
+    state = normalizeState(imported);
+    save();
+    rerenderAll();
+  };
+  r.readAsText(e.target.files[0]);
+};
+
+// ===== Add Person / Clear =====
+addPersonBtn.onclick = () => {
+  if (!personName.value) return;
+  state.people.push({ id: uid(), name: personName.value });
+  personName.value = "";
+  save();
+  rerenderAll();
+};
+
+clearBtn.onclick = () => {
+  state = { people: [], txns: [] };
+  save();
+  rerenderAll();
+};
+
+// ===== Build Share Detail =====
 function buildShareDetails(t) {
   const nameOf = (id) => state.people.find((p) => p.id === id)?.name || "-";
-  t.participants = t.participants || [];
-  t.shares = t.shares || {};
   const shares = {};
 
   if (t.splitMode === "equal") {
     const base = Math.floor((t.amount / state.people.length) * 100) / 100;
     let acc = 0;
-    state.people.forEach((p, i) => {
+    state.people.forEach((p, idx) => {
       shares[p.id] =
-        i === state.people.length - 1 ? round2(t.amount - acc) : base;
+        idx === state.people.length - 1
+          ? round2(t.amount - acc)
+          : base;
       acc += shares[p.id];
     });
     return (
@@ -293,9 +333,11 @@ function buildShareDetails(t) {
   if (t.splitMode === "participants") {
     const base = Math.floor((t.amount / t.participants.length) * 100) / 100;
     let acc = 0;
-    t.participants.forEach((id, i) => {
+    t.participants.forEach((id, idx) => {
       shares[id] =
-        i === t.participants.length - 1 ? round2(t.amount - acc) : base;
+        idx === t.participants.length - 1
+          ? round2(t.amount - acc)
+          : base;
       acc += shares[id];
     });
     return (
@@ -308,25 +350,27 @@ function buildShareDetails(t) {
 
   if (t.splitMode === "custom") {
     let used = 0;
+    const fixed = {};
     const auto = [];
 
     t.participants.forEach((id) => {
-      if (t.shares[id] !== "" && t.shares[id] != null) {
-        shares[id] = round2(+t.shares[id]);
-        used += shares[id];
+      if (t.shares?.[id] != null && t.shares[id] !== "") {
+        fixed[id] = round2(+t.shares[id]);
+        used += fixed[id];
       } else auto.push(id);
     });
 
     const remain = round2(t.amount - used);
     const base =
       auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
-    let acc = 0;
 
-    auto.forEach((id, i) => {
+    let acc = 0;
+    auto.forEach((id, idx) => {
       shares[id] =
-        i === auto.length - 1 ? round2(remain - acc) : base;
+        idx === auto.length - 1 ? round2(remain - acc) : base;
       acc += shares[id];
     });
+    Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
 
     return (
       "กำหนดเอง: " +
@@ -339,7 +383,7 @@ function buildShareDetails(t) {
   return "-";
 }
 
-// ================= Init =================
+// ===== Init =====
 function rerenderAll() {
   renderPeople();
   renderTxns();
