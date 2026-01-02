@@ -24,24 +24,19 @@ splitMode.addEventListener("change", () => {
     splitMode.value === "custom" ? "block" : "none";
 });
 
-// ===== เพิ่ม: ฟังก์ชันปัดเศษ =====
+// ===== Utils =====
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+const uid = () => Math.random().toString(36).substr(2, 9);
 
-// Load state
+// ===== State =====
 let state = JSON.parse(
   localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}'
 );
-
 let editTxnId = null;
-
-// UID
-const uid = () => Math.random().toString(36).substr(2, 9);
-
-// Save
 const save = () =>
   localStorage.setItem("bidkub_state", JSON.stringify(state));
 
-// Render People
+// ===== Render People =====
 function renderPeople() {
   txnPayer.innerHTML = `<option value="">ผู้จ่าย</option>`;
   state.people.forEach((p) => {
@@ -53,7 +48,7 @@ function renderPeople() {
   renderSplitControls();
 }
 
-// Render Split Controls
+// ===== Render Split Controls =====
 function renderSplitControls() {
   participantsCheckboxes.innerHTML = "";
   customShares.innerHTML = "";
@@ -73,13 +68,12 @@ function renderSplitControls() {
   });
 }
 
-// Render Transactions
+// ===== Render Transactions =====
 function renderTxns() {
   txnList.innerHTML = "";
 
   state.txns.forEach((t) => {
     const payer = state.people.find((p) => p.id === t.payerId);
-
     const participantNames = t.participants
       .map((id) => state.people.find((p) => p.id === id)?.name)
       .filter(Boolean)
@@ -117,7 +111,7 @@ function renderTxns() {
   });
 }
 
-// Load edit
+// ===== Load Edit =====
 function loadEditTxn(id) {
   const t = state.txns.find((x) => x.id === id);
   if (!t) return;
@@ -135,42 +129,86 @@ function loadEditTxn(id) {
 
   if (t.splitMode === "custom") {
     document.querySelectorAll(".custom-share-input").forEach((i) => {
-      i.value = t.shares?.[i.dataset.id] || "";
+      i.value = t.shares?.[i.dataset.id] ?? "";
     });
   }
 }
 
-// ===== Calculate Balances (เพิ่ม round2) =====
+// ===== Calculate Balances (CORRECT LOGIC) =====
 function calculateBalances() {
   const bal = {};
   state.people.forEach((p) => (bal[p.id] = 0));
 
   state.txns.forEach((t) => {
-    let shares = {};
+    const shares = {};
 
-    if (t.splitMode === "equal") {
-      const cut = round2(t.amount / state.people.length);
-      state.people.forEach((p) => (shares[p.id] = cut));
-    }
-
-    if (t.splitMode === "participants") {
-      const cut = round2(t.amount / t.participants.length);
-      t.participants.forEach((id) => (shares[id] = cut));
-    }
-
+    // 1) custom — เฉพาะคนที่ติ๊ก
     if (t.splitMode === "custom") {
       let used = 0;
-      Object.entries(t.shares || {}).forEach(([id, v]) => (used += v));
+      const fixed = {};
+      const auto = [];
 
-      const auto = t.participants.filter((id) => !t.shares?.[id]);
-      const remain = t.amount - used;
-      const autoShare = auto.length ? round2(remain / auto.length) : 0;
+      t.participants.forEach((id) => {
+        if (t.shares?.[id] != null && t.shares[id] !== "") {
+          fixed[id] = round2(+t.shares[id]);
+          used += fixed[id];
+        } else {
+          auto.push(id);
+        }
+      });
 
-      t.participants.forEach(
-        (id) => (shares[id] = round2(t.shares?.[id] || autoShare))
-      );
+      const remain = round2(t.amount - used);
+      const base =
+        auto.length > 0
+          ? Math.floor((remain / auto.length) * 100) / 100
+          : 0;
+
+      let acc = 0;
+      auto.forEach((id, idx) => {
+        if (idx === auto.length - 1) {
+          shares[id] = round2(remain - acc);
+        } else {
+          shares[id] = base;
+          acc += base;
+        }
+      });
+
+      Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
     }
 
+    // 2) equal — ทุกคนหาร
+    if (t.splitMode === "equal") {
+      const base =
+        Math.floor((t.amount / state.people.length) * 100) / 100;
+      let acc = 0;
+
+      state.people.forEach((p, idx) => {
+        if (idx === state.people.length - 1) {
+          shares[p.id] = round2(t.amount - acc);
+        } else {
+          shares[p.id] = base;
+          acc += base;
+        }
+      });
+    }
+
+    // 3) participants — เฉพาะคนที่ติ๊ก
+    if (t.splitMode === "participants") {
+      const base =
+        Math.floor((t.amount / t.participants.length) * 100) / 100;
+      let acc = 0;
+
+      t.participants.forEach((id, idx) => {
+        if (idx === t.participants.length - 1) {
+          shares[id] = round2(t.amount - acc);
+        } else {
+          shares[id] = base;
+          acc += base;
+        }
+      });
+    }
+
+    // apply
     Object.entries(shares).forEach(
       ([id, amt]) => (bal[id] = round2(bal[id] - amt))
     );
@@ -180,7 +218,7 @@ function calculateBalances() {
   return bal;
 }
 
-// Summary
+// ===== Summary =====
 function renderSummary() {
   summaryBalances.innerHTML = "";
   const bal = calculateBalances();
@@ -192,7 +230,7 @@ function renderSummary() {
   });
 }
 
-// Settlement
+// ===== Settlement =====
 function renderSettlements() {
   settlementList.innerHTML = "";
   const bal = calculateBalances();
@@ -221,10 +259,10 @@ function renderSettlements() {
   }
 }
 
-// Add / Update Txn
+// ===== Add / Update Txn =====
 addTxnBtn.onclick = () => {
   const amount = +txnAmount.value;
-  if (!amount) return;
+  if (!amount || !txnPayer.value) return;
 
   const participants = [...document.querySelectorAll("#participantsCheckboxes input:checked")]
     .map((c) => c.dataset.id);
@@ -240,7 +278,10 @@ addTxnBtn.onclick = () => {
     amount,
     payerId: txnPayer.value,
     splitMode: splitMode.value,
-    participants: participants.length ? participants : state.people.map((p) => p.id),
+    participants:
+      splitMode.value === "equal"
+        ? state.people.map((p) => p.id)
+        : participants,
     shares,
   };
 
@@ -256,14 +297,13 @@ addTxnBtn.onclick = () => {
   rerenderAll();
 };
 
-// Clear
+// ===== Other Controls =====
 clearBtn.onclick = () => {
   state = { people: [], txns: [] };
   save();
   rerenderAll();
 };
 
-// Add person
 addPersonBtn.onclick = () => {
   if (!personName.value) return;
   state.people.push({ id: uid(), name: personName.value });
@@ -272,7 +312,6 @@ addPersonBtn.onclick = () => {
   rerenderAll();
 };
 
-// Export / Import
 exportBtn.onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], {
     type: "application/json",
@@ -293,7 +332,7 @@ importFile.onchange = (e) => {
   r.readAsText(e.target.files[0]);
 };
 
-// Rerender
+// ===== Init =====
 function rerenderAll() {
   renderPeople();
   renderTxns();
@@ -301,5 +340,4 @@ function rerenderAll() {
   renderSettlements();
 }
 
-// Init
 rerenderAll();
