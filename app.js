@@ -132,7 +132,20 @@ function loadEditTxn(id) {
       i.value = t.shares?.[i.dataset.id] ?? "";
     });
   }
+
+  // 🔹 เพิ่มตรงนี้เลย
+  const section = document.getElementById("addTxnSection");
+  if (section) {
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // โฟกัสช่องแรกให้แก้ไขทันที
+  txnDesc.focus();
+
+  // (ถ้ามีปุ่มเดียวใช้เพิ่ม/แก้)
+  addTxnBtn.textContent = "บันทึกการแก้ไข";
 }
+
 
 // ===== Calculate Balances (CORRECT LOGIC) =====
 function calculateBalances() {
