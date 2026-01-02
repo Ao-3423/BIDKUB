@@ -141,39 +141,177 @@
 
     <!-- JS -->
     <script src="app.js"></script>
-<script>
-document.getElementById("exportPdfBtn").addEventListener("click", async () => {
-    const element = document.getElementById("reportArea");
+    <script>
+        // SweetAlert2 Function Definitions
 
-    if (!element || element.innerText.trim() === "") {
-        Swal.fire({
-            icon: "warning",
-            title: "ยังไม่มีข้อมูล",
-            text: "กรุณาเพิ่มรายการก่อนส่งออก PDF",
+        // ฟังก์ชันแสดงป๊อกอัพเตือนกรอกชื่อสมาชิก
+        function showNameWarning() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณากรอกชื่อสมาชิก',
+                text: 'ชื่อสมาชิกไม่สามารถว่างได้',
+            });
+        }
+
+        // ฟังก์ชันแสดงป๊อกอัพเตือนกรอกข้อมูลรายการไม่ครบ
+        function showTxnWarning() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+                text: 'กรุณากรอกจำนวนเงินและผู้จ่าย',
+            });
+        }
+
+        // ฟังก์ชันแสดงป๊อกอัพยืนยันการลบรายการ
+        function showDeleteConfirm(callback) {
+            Swal.fire({
+                icon: 'question',
+                title: 'คุณแน่ใจหรือไม่?',
+                text: 'คุณต้องการลบรายการนี้?',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    callback(); // เรียกฟังก์ชันลบจริงๆ
+                }
+            });
+        }
+
+        // ฟังก์ชันแสดงป๊อกอัพยืนยันการล้างข้อมูลทั้งหมด
+        function showClearConfirm(callback) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'คุณแน่ใจหรือไม่?',
+                text: 'การล้างข้อมูลจะลบข้อมูลทั้งหมด!',
+                showCancelButton: true,
+                confirmButtonText: 'ล้างข้อมูล',
+                cancelButtonText: 'ยกเลิก',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    callback(); // เรียกฟังก์ชันล้างข้อมูล
+                }
+            });
+        }
+
+        // ===== Render People =====
+        function renderPeople() {
+            txnPayer.innerHTML = `<option value="">ผู้จ่าย</option>`;
+            state.people.forEach((p) => {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.textContent = p.name;
+                txnPayer.appendChild(opt);
+            });
+            renderSplitControls();
+        }
+
+        // ===== Handle Add Person =====
+        addPersonBtn.onclick = () => {
+            if (!personName.value) {
+                showNameWarning(); // เรียกฟังก์ชันแจ้งเตือนกรอกชื่อ
+                return;
+            }
+            state.people.push({ id: uid(), name: personName.value });
+            personName.value = "";
+            save();
+            rerenderAll();
+        };
+
+        // ===== Handle Add Transaction =====
+        addTxnBtn.onclick = () => {
+            const amount = +txnAmount.value;
+            if (!amount || !txnPayer.value) {
+                showTxnWarning(); // เรียกฟังก์ชันแจ้งเตือนกรอกข้อมูล
+                return;
+            }
+
+            const participants = [
+                ...document.querySelectorAll("#participantsCheckboxes input:checked"),
+            ].map((c) => c.dataset.id);
+
+            const shares = {};
+            document.querySelectorAll(".custom-share-input").forEach((i) => {
+                if (i.value) shares[i.dataset.id] = +i.value;
+            });
+
+            const data = {
+                id: editTxnId || uid(),
+                desc: txnDesc.value || "Expense",
+                amount,
+                payerId: txnPayer.value,
+                splitMode: splitMode.value,
+                participants:
+                    splitMode.value === "equal"
+                        ? state.people.map((p) => p.id)
+                        : participants,
+                shares,
+            };
+
+            if (editTxnId) {
+                state.txns = state.txns.map((t) => (t.id === editTxnId ? data : t));
+                editTxnId = null;
+            } else {
+                state.txns.push(data);
+            }
+
+            txnDesc.value = txnAmount.value = "";
+            save();
+            rerenderAll();
+        };
+
+        // ===== Handle Clear All Data =====
+        clearBtn.onclick = () => {
+            showClearConfirm(() => {
+                state = { people: [], txns: [] };
+                save();
+                rerenderAll();
+            });
+        };
+
+        // ===== Handle Delete Transaction =====
+        document.querySelectorAll(".del").forEach((b) => {
+            b.onclick = () => {
+                showDeleteConfirm(() => {
+                    state.txns = state.txns.filter((x) => x.id !== b.dataset.id);
+                    save();
+                    rerenderAll();
+                });
+            };
         });
-        return;
-    }
 
-    // 🔥 เปิดโหมด PDF
-    document.body.classList.add("pdf-export");
+        // ===== Export PDF =====
+        document.getElementById("exportPdfBtn").addEventListener("click", async () => {
+            const element = document.getElementById("reportArea");
 
-    await new Promise(resolve => setTimeout(resolve, 300));
+            if (!element || element.innerText.trim() === "") {
+                Swal.fire({
+                    icon: "warning",
+                    title: "ยังไม่มีข้อมูล",
+                    text: "กรุณาเพิ่มรายการก่อนส่งออก PDF",
+                });
+                return;
+            }
 
-    const opt = {
-        margin: 10,
-        filename: 'BIDKUB-report.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+            // 🔥 เปิดโหมด PDF
+            document.body.classList.add("pdf-export");
 
-    await html2pdf().set(opt).from(element).save();
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-    // 🔥 ปิดโหมด PDF (UI กลับเหมือนเดิม)
-    document.body.classList.remove("pdf-export");
-});
-</script>
+            const opt = {
+                margin: 10,
+                filename: 'BIDKUB-report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
 
+            await html2pdf().set(opt).from(element).save();
+
+            // 🔥 ปิดโหมด PDF (UI กลับเหมือนเดิม)
+            document.body.classList.remove("pdf-export");
+        });
+    </script>
 
 </body>
 
