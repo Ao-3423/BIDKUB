@@ -33,37 +33,8 @@ let state = JSON.parse(
   localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}'
 );
 let editTxnId = null;
-const save = () => localStorage.setItem("bidkub_state", JSON.stringify(state));
-
-// ===== 🔧 Normalize Imported State =====
-function normalizeState(state) {
-  state.txns.forEach((t) => {
-    // equal = ทุกคน + ไม่ใช้ shares
-    if (t.splitMode === "equal") {
-      t.participants = state.people.map((p) => p.id);
-      t.shares = {};
-    }
-
-    // participants = ไม่ใช้ shares
-    if (t.splitMode === "participants") {
-      t.shares = {};
-    }
-
-    // custom = ใช้เฉพาะคนที่อยู่ใน participants
-    if (t.splitMode === "custom") {
-      if (!t.shares) t.shares = {};
-      t.participants = t.participants || [];
-
-      Object.keys(t.shares).forEach((id) => {
-        if (!t.participants.includes(id)) {
-          delete t.shares[id];
-        }
-      });
-    }
-  });
-
-  return state;
-}
+const save = () =>
+  localStorage.setItem("bidkub_state", JSON.stringify(state));
 
 // ===== Render People =====
 function renderPeople() {
@@ -103,7 +74,10 @@ function renderTxns() {
 
   state.txns.forEach((t) => {
     const payer = state.people.find((p) => p.id === t.payerId);
-    const splitDetail = buildShareDetails(t);
+    const participantNames = t.participants
+      .map((id) => state.people.find((p) => p.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
 
     const li = document.createElement("li");
     li.innerHTML = `
@@ -112,7 +86,9 @@ function renderTxns() {
         <div class="smalltext">
           ${t.amount.toLocaleString()} THB • ผู้จ่าย: ${payer?.name || "-"}
         </div>
-        <div class="muted small">${splitDetail}</div>
+        <div class="muted small">
+          หารกับ: ${participantNames || "-"}
+        </div>
       </div>
       <div>
         <button class="edit" data-id="${t.id}">แก้ไข</button>
@@ -158,7 +134,7 @@ function loadEditTxn(id) {
   }
 }
 
-// ===== Calculate Balances =====
+// ===== Calculate Balances (CORRECT LOGIC) =====
 function calculateBalances() {
   const bal = {};
   state.people.forEach((p) => (bal[p.id] = 0));
@@ -166,6 +142,7 @@ function calculateBalances() {
   state.txns.forEach((t) => {
     const shares = {};
 
+    // 1) custom — เฉพาะคนที่ติ๊ก
     if (t.splitMode === "custom") {
       let used = 0;
       const fixed = {};
@@ -182,44 +159,56 @@ function calculateBalances() {
 
       const remain = round2(t.amount - used);
       const base =
-        auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
+        auto.length > 0
+          ? Math.floor((remain / auto.length) * 100) / 100
+          : 0;
 
       let acc = 0;
       auto.forEach((id, idx) => {
-        shares[id] =
-          idx === auto.length - 1 ? round2(remain - acc) : base;
-        acc += shares[id];
+        if (idx === auto.length - 1) {
+          shares[id] = round2(remain - acc);
+        } else {
+          shares[id] = base;
+          acc += base;
+        }
       });
 
       Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
     }
 
+    // 2) equal — ทุกคนหาร
     if (t.splitMode === "equal") {
-      const base = Math.floor((t.amount / state.people.length) * 100) / 100;
+      const base =
+        Math.floor((t.amount / state.people.length) * 100) / 100;
       let acc = 0;
 
       state.people.forEach((p, idx) => {
-        shares[p.id] =
-          idx === state.people.length - 1
-            ? round2(t.amount - acc)
-            : base;
-        acc += shares[p.id];
+        if (idx === state.people.length - 1) {
+          shares[p.id] = round2(t.amount - acc);
+        } else {
+          shares[p.id] = base;
+          acc += base;
+        }
       });
     }
 
+    // 3) participants — เฉพาะคนที่ติ๊ก
     if (t.splitMode === "participants") {
-      const base = Math.floor((t.amount / t.participants.length) * 100) / 100;
+      const base =
+        Math.floor((t.amount / t.participants.length) * 100) / 100;
       let acc = 0;
 
       t.participants.forEach((id, idx) => {
-        shares[id] =
-          idx === t.participants.length - 1
-            ? round2(t.amount - acc)
-            : base;
-        acc += shares[id];
+        if (idx === t.participants.length - 1) {
+          shares[id] = round2(t.amount - acc);
+        } else {
+          shares[id] = base;
+          acc += base;
+        }
       });
     }
 
+    // apply
     Object.entries(shares).forEach(
       ([id, amt]) => (bal[id] = round2(bal[id] - amt))
     );
@@ -245,32 +234,84 @@ function renderSummary() {
 function renderSettlements() {
   settlementList.innerHTML = "";
   const bal = calculateBalances();
-  const debt = [],
-    credit = [];
+  const debt = [], credit = [];
 
   Object.entries(bal).forEach(([id, v]) => {
     if (v < 0) debt.push({ id, amt: -v });
     if (v > 0) credit.push({ id, amt: v });
   });
 
-  let i = 0,
-    j = 0;
+  let i = 0, j = 0;
   while (i < debt.length && j < credit.length) {
     const pay = round2(Math.min(debt[i].amt, credit[j].amt));
     const li = document.createElement("li");
-    li.textContent = `${state.people.find((p) => p.id === debt[i].id).name} → ${
+    li.textContent = `${
+      state.people.find((p) => p.id === debt[i].id).name
+    } → ${
       state.people.find((p) => p.id === credit[j].id).name
     }: ${pay.toLocaleString()} THB`;
     settlementList.appendChild(li);
 
-    debt[i].amt -= pay;
-    credit[j].amt -= pay;
+    debt[i].amt = round2(debt[i].amt - pay);
+    credit[j].amt = round2(credit[j].amt - pay);
     if (debt[i].amt <= 0) i++;
     if (credit[j].amt <= 0) j++;
   }
 }
 
-// ===== Import / Export =====
+// ===== Add / Update Txn =====
+addTxnBtn.onclick = () => {
+  const amount = +txnAmount.value;
+  if (!amount || !txnPayer.value) return;
+
+  const participants = [...document.querySelectorAll("#participantsCheckboxes input:checked")]
+    .map((c) => c.dataset.id);
+
+  const shares = {};
+  document.querySelectorAll(".custom-share-input").forEach((i) => {
+    if (i.value) shares[i.dataset.id] = +i.value;
+  });
+
+  const data = {
+    id: editTxnId || uid(),
+    desc: txnDesc.value || "Expense",
+    amount,
+    payerId: txnPayer.value,
+    splitMode: splitMode.value,
+    participants:
+      splitMode.value === "equal"
+        ? state.people.map((p) => p.id)
+        : participants,
+    shares,
+  };
+
+  if (editTxnId) {
+    state.txns = state.txns.map((t) => (t.id === editTxnId ? data : t));
+    editTxnId = null;
+  } else {
+    state.txns.push(data);
+  }
+
+  txnDesc.value = txnAmount.value = "";
+  save();
+  rerenderAll();
+};
+
+// ===== Other Controls =====
+clearBtn.onclick = () => {
+  state = { people: [], txns: [] };
+  save();
+  rerenderAll();
+};
+
+addPersonBtn.onclick = () => {
+  if (!personName.value) return;
+  state.people.push({ id: uid(), name: personName.value });
+  personName.value = "";
+  save();
+  rerenderAll();
+};
+
 exportBtn.onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], {
     type: "application/json",
@@ -284,104 +325,12 @@ exportBtn.onclick = () => {
 importFile.onchange = (e) => {
   const r = new FileReader();
   r.onload = () => {
-    const imported = JSON.parse(r.result);
-    state = normalizeState(imported);
+    state = JSON.parse(r.result);
     save();
     rerenderAll();
   };
   r.readAsText(e.target.files[0]);
 };
-
-// ===== Add Person / Clear =====
-addPersonBtn.onclick = () => {
-  if (!personName.value) return;
-  state.people.push({ id: uid(), name: personName.value });
-  personName.value = "";
-  save();
-  rerenderAll();
-};
-
-clearBtn.onclick = () => {
-  state = { people: [], txns: [] };
-  save();
-  rerenderAll();
-};
-
-// ===== Build Share Detail =====
-function buildShareDetails(t) {
-  const nameOf = (id) => state.people.find((p) => p.id === id)?.name || "-";
-  const shares = {};
-
-  if (t.splitMode === "equal") {
-    const base = Math.floor((t.amount / state.people.length) * 100) / 100;
-    let acc = 0;
-    state.people.forEach((p, idx) => {
-      shares[p.id] =
-        idx === state.people.length - 1
-          ? round2(t.amount - acc)
-          : base;
-      acc += shares[p.id];
-    });
-    return (
-      "ทุกคนหาร: " +
-      Object.entries(shares)
-        .map(([id, v]) => `${nameOf(id)} ${v}`)
-        .join(", ")
-    );
-  }
-
-  if (t.splitMode === "participants") {
-    const base = Math.floor((t.amount / t.participants.length) * 100) / 100;
-    let acc = 0;
-    t.participants.forEach((id, idx) => {
-      shares[id] =
-        idx === t.participants.length - 1
-          ? round2(t.amount - acc)
-          : base;
-      acc += shares[id];
-    });
-    return (
-      "เฉพาะคนที่เลือก: " +
-      Object.entries(shares)
-        .map(([id, v]) => `${nameOf(id)} ${v}`)
-        .join(", ")
-    );
-  }
-
-  if (t.splitMode === "custom") {
-    let used = 0;
-    const fixed = {};
-    const auto = [];
-
-    t.participants.forEach((id) => {
-      if (t.shares?.[id] != null && t.shares[id] !== "") {
-        fixed[id] = round2(+t.shares[id]);
-        used += fixed[id];
-      } else auto.push(id);
-    });
-
-    const remain = round2(t.amount - used);
-    const base =
-      auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
-
-    let acc = 0;
-    auto.forEach((id, idx) => {
-      shares[id] =
-        idx === auto.length - 1 ? round2(remain - acc) : base;
-      acc += shares[id];
-    });
-    Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
-
-    return (
-      "กำหนดเอง: " +
-      Object.entries(shares)
-        .map(([id, v]) => `${nameOf(id)} ${v}`)
-        .join(", ")
-    );
-  }
-
-  return "-";
-}
 
 // ===== Init =====
 function rerenderAll() {
