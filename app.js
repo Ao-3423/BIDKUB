@@ -1,6 +1,8 @@
 // DOM elements
 const txnList = document.getElementById("txnList");
-const participantsCheckboxes = document.getElementById("participantsCheckboxes");
+const participantsCheckboxes = document.getElementById(
+  "participantsCheckboxes"
+);
 const customShares = document.getElementById("customShares");
 const addPersonBtn = document.getElementById("addPersonBtn");
 const personName = document.getElementById("personName");
@@ -33,8 +35,7 @@ let state = JSON.parse(
   localStorage.getItem("bidkub_state") || '{"people":[],"txns":[]}'
 );
 let editTxnId = null;
-const save = () =>
-  localStorage.setItem("bidkub_state", JSON.stringify(state));
+const save = () => localStorage.setItem("bidkub_state", JSON.stringify(state));
 
 // ===== Render People =====
 function renderPeople() {
@@ -74,10 +75,9 @@ function renderTxns() {
 
   state.txns.forEach((t) => {
     const payer = state.people.find((p) => p.id === t.payerId);
-    const participantNames = t.participants
-      .map((id) => state.people.find((p) => p.id === id)?.name)
-      .filter(Boolean)
-      .join(", ");
+
+    // 🔹 เพิ่ม: รายละเอียดการหารแบบอ่านได้
+    const splitDetail = buildShareDetails(t);
 
     const li = document.createElement("li");
     li.innerHTML = `
@@ -87,7 +87,7 @@ function renderTxns() {
           ${t.amount.toLocaleString()} THB • ผู้จ่าย: ${payer?.name || "-"}
         </div>
         <div class="muted small">
-          หารกับ: ${participantNames || "-"}
+          ${splitDetail}
         </div>
       </div>
       <div>
@@ -159,9 +159,7 @@ function calculateBalances() {
 
       const remain = round2(t.amount - used);
       const base =
-        auto.length > 0
-          ? Math.floor((remain / auto.length) * 100) / 100
-          : 0;
+        auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
 
       let acc = 0;
       auto.forEach((id, idx) => {
@@ -178,8 +176,7 @@ function calculateBalances() {
 
     // 2) equal — ทุกคนหาร
     if (t.splitMode === "equal") {
-      const base =
-        Math.floor((t.amount / state.people.length) * 100) / 100;
+      const base = Math.floor((t.amount / state.people.length) * 100) / 100;
       let acc = 0;
 
       state.people.forEach((p, idx) => {
@@ -194,8 +191,7 @@ function calculateBalances() {
 
     // 3) participants — เฉพาะคนที่ติ๊ก
     if (t.splitMode === "participants") {
-      const base =
-        Math.floor((t.amount / t.participants.length) * 100) / 100;
+      const base = Math.floor((t.amount / t.participants.length) * 100) / 100;
       let acc = 0;
 
       t.participants.forEach((id, idx) => {
@@ -234,20 +230,20 @@ function renderSummary() {
 function renderSettlements() {
   settlementList.innerHTML = "";
   const bal = calculateBalances();
-  const debt = [], credit = [];
+  const debt = [],
+    credit = [];
 
   Object.entries(bal).forEach(([id, v]) => {
     if (v < 0) debt.push({ id, amt: -v });
     if (v > 0) credit.push({ id, amt: v });
   });
 
-  let i = 0, j = 0;
+  let i = 0,
+    j = 0;
   while (i < debt.length && j < credit.length) {
     const pay = round2(Math.min(debt[i].amt, credit[j].amt));
     const li = document.createElement("li");
-    li.textContent = `${
-      state.people.find((p) => p.id === debt[i].id).name
-    } → ${
+    li.textContent = `${state.people.find((p) => p.id === debt[i].id).name} → ${
       state.people.find((p) => p.id === credit[j].id).name
     }: ${pay.toLocaleString()} THB`;
     settlementList.appendChild(li);
@@ -264,8 +260,9 @@ addTxnBtn.onclick = () => {
   const amount = +txnAmount.value;
   if (!amount || !txnPayer.value) return;
 
-  const participants = [...document.querySelectorAll("#participantsCheckboxes input:checked")]
-    .map((c) => c.dataset.id);
+  const participants = [
+    ...document.querySelectorAll("#participantsCheckboxes input:checked"),
+  ].map((c) => c.dataset.id);
 
   const shares = {};
   document.querySelectorAll(".custom-share-input").forEach((i) => {
@@ -338,6 +335,87 @@ function rerenderAll() {
   renderTxns();
   renderSummary();
   renderSettlements();
+}
+// ===== Build Share Detail (SAFE - ไม่กระทบของเดิม) =====
+function buildShareDetails(t) {
+  const nameOf = (id) => state.people.find((p) => p.id === id)?.name || "-";
+
+  const shares = {};
+
+  // ----- custom -----
+  if (t.splitMode === "custom") {
+    let used = 0;
+    const fixed = {};
+    const auto = [];
+
+    t.participants.forEach((id) => {
+      if (t.shares?.[id] != null && t.shares[id] !== "") {
+        fixed[id] = round2(+t.shares[id]);
+        used += fixed[id];
+      } else {
+        auto.push(id);
+      }
+    });
+
+    const remain = round2(t.amount - used);
+    const base =
+      auto.length > 0 ? Math.floor((remain / auto.length) * 100) / 100 : 0;
+
+    let acc = 0;
+    auto.forEach((id, idx) => {
+      shares[id] = idx === auto.length - 1 ? round2(remain - acc) : base;
+      acc += shares[id];
+    });
+
+    Object.entries(fixed).forEach(([id, v]) => (shares[id] = v));
+
+    return (
+      "กำหนดเอง: " +
+      Object.entries(shares)
+        .map(([id, amt]) => `${nameOf(id)} ${amt.toLocaleString()}`)
+        .join(", ")
+    );
+  }
+
+  // ----- equal -----
+  if (t.splitMode === "equal") {
+    const base = Math.floor((t.amount / state.people.length) * 100) / 100;
+    let acc = 0;
+
+    state.people.forEach((p, idx) => {
+      shares[p.id] =
+        idx === state.people.length - 1 ? round2(t.amount - acc) : base;
+      acc += shares[p.id];
+    });
+
+    return (
+      "ทุกคนหาร: " +
+      Object.entries(shares)
+        .map(([id, amt]) => `${nameOf(id)} ${amt.toLocaleString()}`)
+        .join(", ")
+    );
+  }
+
+  // ----- participants -----
+  if (t.splitMode === "participants") {
+    const base = Math.floor((t.amount / t.participants.length) * 100) / 100;
+    let acc = 0;
+
+    t.participants.forEach((id, idx) => {
+      shares[id] =
+        idx === t.participants.length - 1 ? round2(t.amount - acc) : base;
+      acc += shares[id];
+    });
+
+    return (
+      "เฉพาะคนที่เลือก: " +
+      Object.entries(shares)
+        .map(([id, amt]) => `${nameOf(id)} ${amt.toLocaleString()}`)
+        .join(", ")
+    );
+  }
+
+  return "-";
 }
 
 rerenderAll();
